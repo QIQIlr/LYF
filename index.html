@@ -139,6 +139,11 @@ tbody tr.data-row.row-selected>td,tbody tr.data-row.row-selected:hover>td{backgr
 .archive-summary{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;margin:14px 0}.archive-summary dt{color:var(--muted)}.archive-summary dd{margin:0;overflow-wrap:anywhere}
 #archive-errors{max-height:220px;overflow:auto;overflow-wrap:anywhere}
 
+/* Import progress. */
+.import-progress{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:16px}
+.progress-track{height:8px;background:#edf1f3;border-radius:4px;overflow:hidden}
+#import-progress-fill{display:block;height:100%;width:0;background:var(--teal);border-radius:4px;transition:width .2s}
+#import-progress-text{margin:8px 0 0;color:var(--muted);font-variant-numeric:tabular-nums}
 /* Import / append / clear controls. */
 .import-wrap{display:inline-flex}
 .export-menu .menu-danger{color:#a03f31;border-top:1px solid var(--line);border-radius:0;margin-top:4px;padding-top:10px}
@@ -146,16 +151,17 @@ tbody tr.data-row.row-selected>td,tbody tr.data-row.row-selected:hover>td{backgr
 button.danger{background:#a03f31;border-color:#a03f31;color:#fff}button.danger:hover{background:#8a3428}
 #clear-dialog{max-width:460px}
 @media(max-width:760px){.top-actions{flex-wrap:wrap}}
-#protection-panel {margin-top:12px} #protection-panel select {max-width:100%;width:100%} #protection-panel>label {display:block;margin:8px 0} #protection-status {overflow-wrap:anywhere;max-height:120px;overflow:auto}
+
 </style></head>
 <body>
 <header class="top"><div class="top-inner"><div><p class="eyebrow">现场管理 / 作业统计</p><h1>现场数据看板</h1><p class="muted">按实际数据范围统计，按区域与人员核对作业情况。</p></div><div class="top-actions"><button id="append-top" class="primary" hidden>追加 CSV</button><span id="import-wrap" class="import-wrap"><button id="import-button" class="primary">导入 CSV</button></span><div id="export-control" class="export-control"><div class="export-split"><button id="export-button" disabled>导出 Excel</button><button id="export-menu-button" class="export-arrow" aria-label="更多导出选项" aria-expanded="false" aria-controls="export-menu" disabled>▾</button></div><div id="export-menu" class="export-menu" hidden><button id="menu-export-excel">导出 Excel 统计报表</button><button id="menu-export-csv">导出合并原始 CSV</button><button id="menu-clear-all" class="menu-danger">清空并重新导入…</button></div></div></div></div></header>
 <main>
-<input id="csv-files" type="file" accept=".csv,.json,text/csv,application/json" multiple hidden>
+<input id="csv-files" type="file" accept=".csv,text/csv" multiple hidden>
 <div id="notice" role="status" class="notice" hidden></div>
+<div id="import-progress" class="import-progress" role="status" aria-live="polite" hidden><div class="progress-track"><span id="import-progress-fill"></span></div><p id="import-progress-text" class="small"></p></div>
 <section class="panel import-panel" id="drop-zone">
 <button id="import-toggle" class="import-summary" aria-expanded="true" aria-controls="import-body"><strong>导入数据</strong><span id="import-summary" class="small muted">尚未导入文件</span><span class="chevron" aria-hidden="true">⌃</span></button>
-<div id="import-body" class="collapse-body"><div class="collapse-inner"><div class="section-head"><p class="muted small">首次导入可一次选择多个 CSV 文件，也可将文件拖到这里；已有数据后请用顶部“追加 CSV”补充。数据仅保留在当前页面，刷新或关闭后需要重新导入。</p><div class="inline-actions"><button id="import-metadata" class="quiet">导入配套 JSON</button><button id="clear-files" class="quiet" disabled>清空文件</button></div></div><div id="file-list"></div><details id="protection-panel" hidden><summary>隔离与人工核实</summary><p id="protection-status" class="small muted"></p><p class="small muted">日期经过、更多记录或改名不证明完整。核实仅适用于选择的来源版本、完成日期与区域；同时将当前其他已隔离的不同内容排除出正式出勤，原始版本仍留档。请先核对数据检查中的版本冲突及原始来源。</p><label>核实范围<select id="verify-scope"></select></label><label class="small"><input id="verify-ack" type="checkbox">我已人工核实该来源在所选日期、区域的数据，可参与正式统计</label><label>备注<input id="verify-note" maxlength="500" placeholder="简短核实依据"></label><button id="verify-source" class="quiet">确认核实并重算</button></details><p id="import-status" class="small muted">尚未导入文件。</p></div></div></section>
+<div id="import-body" class="collapse-body"><div class="collapse-inner"><div class="section-head"><p class="muted small">首次导入可一次选择多个 CSV 文件，也可将文件拖到这里；已有数据后请用顶部“追加 CSV”补充。数据仅保留在当前页面，刷新或关闭后需要重新导入。</p><div class="inline-actions"><button id="clear-files" class="quiet" disabled>清空文件</button></div></div><div id="file-list"></div><p id="import-status" class="small muted">尚未导入文件。</p></div></div></section>
 <section id="empty" class="panel empty"><span class="file-mark">CSV</span><h2>导入文件，开始查看现场数据</h2><p>无论导入整月、10天或多个文件的数据，均按实际完成日期统计。</p><p class="muted">导入并检查 → 选择日期、区域和人员 → 查看统计或导出 Excel</p></section>
 <div id="dashboard" hidden>
 <section class="panel filters"><p id="data-range" class="small muted"></p><div class="filter-row"><label>开始日期<input id="start-date" type="date"></label><label>结束日期<input id="end-date" type="date"></label><div class="date-actions"><button id="apply-dates" class="primary">应用</button><button id="reset-dates">重置日期</button></div><label>区域分析<select id="area"><option value="">全部区域</option></select></label><div class="operator-field"><label for="operator-search">人员分析</label><input id="operator-search" type="search" placeholder="输入姓名查找操作员" aria-label="查找操作员"><select id="operator" aria-label="选择操作员"><option value="">全部操作员</option></select></div><label>汇总方式<select id="grain"><option value="day">按日</option><option value="week">按周</option><option value="month">按月</option></select></label></div><p id="current-range" class="small"></p></section>
@@ -163,7 +169,7 @@ button.danger{background:#a03f31;border-color:#a03f31;color:#fff}button.danger:h
 <section class="panel"><div class="section-head"><div><h2>作业趋势</h2><p class="muted small">日期范围内无记录的时段保留显示，实际作业情况以现场核实为准。</p></div><span id="trend-scope" class="small muted"></span></div><h3>各区域完成单量对比</h3><div id="trend-legend" class="trend-legend" aria-label="区域图例"></div><div id="orders-chart" class="region-chart-scroll"></div><div id="trend-tooltip" class="trend-tooltip" role="tooltip" hidden></div><details id="trend-details"><summary>查看日期汇总表</summary>
 <div class="local-toolbar"><label>表内日期<select id="trend-preset"><option value="all">全部</option><option value="7">近7天</option><option value="14">近14天</option><option value="30">近30天</option><option value="month">本月</option><option value="previousMonth">上月</option><option value="custom">自定义</option></select></label><div id="trend-custom" class="inline-actions" hidden><input id="trend-start" type="date" aria-label="日期汇总表开始日期"><span>～</span><input id="trend-end" type="date" aria-label="日期汇总表结束日期"><button id="trend-apply" class="quiet">应用</button></div><span id="trend-range" class="small muted"></span></div><p class="small muted">快捷范围以最新完成日期为基准，仅在主看板当前日期内展示；汇总方式跟随顶部设置。点击表头切换排序。</p><p id="trend-error" class="error-text" role="alert"></p><div id="trend-table"></div></details></section>
 <section class="panel"><div class="section-head"><div><h2>区域概况</h2><p class="muted small">区域来自 CSV 的所属区域字段，任务类型按实际数据展示。</p></div></div><div id="area-table"></div></section>
-<section class="panel"><div class="section-head"><div><h2>操作员统计 <span id="people-total" class="small muted"></span></h2><p class="muted small">当前日期 · 全部已导入区域 · 点击姓名查看详情 · 点击数值表头排序（降序 → 升序 → 默认）</p></div><div class="people-tools"><div class="rank-switch" role="group" aria-label="操作员排行模式"><button id="rank-total" class="quiet active" aria-pressed="true">累计排行</button><button id="rank-average" class="quiet" aria-pressed="false">日均排行</button></div><button id="clear-people" class="quiet" disabled>清除筛选</button></div></div><p id="people-count" class="small muted"></p><div id="operator-table"></div></section>
+<section class="panel"><div class="section-head"><div><h2>操作员统计 <span id="people-total" class="small muted"></span></h2><p class="muted small">当前日期 · 全部已导入区域 · 点击姓名查看详情 · 点击数值表头排序（降序 → 升序 → 默认）</p></div><div class="people-tools"><div class="rank-switch" role="group" aria-label="操作员排行模式"><button id="rank-total" class="quiet active" aria-pressed="true">累计排行</button><button id="rank-average" class="quiet" aria-pressed="false">日均排行</button></div><button id="clear-people" class="quiet" disabled>清除筛选</button></div></div><p id="people-count" class="small muted"></p><p id="people-area-note" class="small muted" hidden></p><div id="operator-table"></div></section>
 <section class="panel"><details id="attendance-details"><summary>作业时间与出勤辅助</summary><p class="muted small">结合全天接单和完成记录观察。首次接单与最后完成时间保留可识别的实际记录；作业跨度仅依据顺序正确的接单与完成记录，不等于实际工作时长。记录间隔不代表空闲或缺勤。</p><p class="muted small">出勤及加班时间根据作业记录推定，仅供现场管理参考，实际考勤与工资核算以真实劳动时间及有效考勤记录为准。正常结束阈值18:45，晚间加班识别阈值19:10。</p><div id="attendance-table"></div></details></section>
 <section class="panel"><details id="detail-details"><summary>作业记录明细<span id="detail-count" class="small muted"></span></summary><p class="small muted">展示去重后的有效完成日期记录；原始关联包裹数和统计值分别保留。其他字段可在 Excel 导出时选择。</p><div class="local-toolbar detail-toolbar"><label for="detail-search">任务编号</label><input id="detail-search" type="search" placeholder="输入任务编号搜索…" aria-label="搜索任务编号"><button id="detail-clear" class="quiet" disabled>清空</button><span id="detail-results" class="small muted" role="status"></span><label>每页<select id="detail-size"><option value="20" selected>20条</option><option value="50">50条</option><option value="100">100条</option></select></label></div><div id="detail-table"></div></details></section>
 <section class="panel"><details id="check-details"><summary>数据检查 <span id="check-count" class="small muted"></span></summary><div id="quality-summary" class="quality-summary"></div><p id="check-summary" class="small"></p><h3>全部数据的无记录日期</h3><p id="missing-global" class="small"></p><h3>当前筛选的无记录日期</h3><p id="missing-local" class="small"></p><div id="issues-table"></div></details></section>
@@ -171,7 +177,7 @@ button.danger{background:#a03f31;border-color:#a03f31;color:#fff}button.danger:h
 <footer>统计口径：有效作业每行计1单；关联包裹按字段累计，单箱增值至少计1。</footer>
 </main>
 <dialog id="export-dialog"><div class="dialog-head"><h2>导出 Excel</h2><button id="close-export" aria-label="关闭导出窗口">关闭</button></div><p id="export-scope" class="small muted"></p><fieldset><legend>选择导出内容</legend><div class="check-options"><label><input name="export-section" type="checkbox" value="summary" checked>统计汇总</label><label><input name="export-section" type="checkbox" value="detail">作业明细</label><label><input name="export-section" type="checkbox" value="attendance">出勤辅助</label><label><input name="export-section" type="checkbox" value="issues">数据检查</label></div></fieldset><label class="small"><input id="export-weight" type="checkbox" checked>统计汇总包含处理重量（kg）</label><fieldset id="export-fields"><legend>作业明细字段</legend><p class="small muted">仅在选择“作业明细”时生效；统计包裹值与来源位置会随明细一同保留。</p><div id="field-options" class="check-options"></div></fieldset><p id="export-error" class="error-text" role="alert"></p><button id="download-excel" class="primary">下载 Excel 文件</button></dialog>
-<dialog id="archive-dialog"><div class="dialog-head"><h2>导出合并原始 CSV</h2><button id="close-archive">取消</button></div><p class="small muted">导出全部已导入原始记录，不受当前筛选影响。</p><div id="archive-summary" class="small"></div><p id="archive-protection" class="small" hidden>该归档存在需恢复的数据保护状态，请同时保存 .protected.csv 和 .isolation.json。新会话可同时导入，或先导入 CSV 再导入 JSON；摘要校验用于内容对应，不代表仓库官方认证。</p><p id="archive-status" class="small" role="status"></p><div id="archive-errors" class="error-text" role="alert"></div><button id="download-archive" class="primary" disabled>下载合并 CSV</button></dialog>
+<dialog id="archive-dialog"><div class="dialog-head"><h2>导出合并原始 CSV</h2><button id="close-archive">取消</button></div><p class="small muted">导出全部已导入的原始记录（按任务编号去重后保留的一条），只包含导出日前一天（日本时间）及以前的数据，不受当前筛选影响。</p><div id="archive-summary" class="small"></div><p id="archive-status" class="small" role="status"></p><div id="archive-errors" class="error-text" role="alert"></div><button id="download-archive" class="primary" disabled>下载合并 CSV</button></dialog>
 <dialog id="clear-dialog" aria-labelledby="clear-title"><div class="dialog-head"><h2 id="clear-title">清空全部已导入数据</h2></div><p id="clear-summary"></p><p class="small muted">只清空本页面中的数据，电脑上的原始 CSV 文件不受影响。需要保留的统计结果，请先导出。</p><div class="dialog-actions"><button id="clear-cancel">取消</button><button id="clear-confirm" class="danger">确认清空</button></div></dialog>
 <div id="column-menu" class="column-menu" hidden></div>
 <div id="drawer-shade" class="drawer-shade" hidden></div>
@@ -256,8 +262,12 @@ function parseCsv(text,fileId,fileName){
   });
   return {fileId,fileName,headers,archiveHeaders,rows,errors};
 }
+// Merged CSV output: every value quoted, CRLF line ends (same bytes as the previous archive writer).
+const csvQuote=s=>'"'+s.replace(/"/g,'""')+'"';
+const csvHeaderLine=headers=>headers.map(csvQuote).join(',')+'\r\n';
+const csvRowLine=(headers,raw)=>headers.map(h=>csvQuote(raw[h.trim()])).join(',')+'\r\n';
 
-return {CORE_HEADERS,headerDifference,decodeCsv,parseCsv};
+return {CORE_HEADERS,headerDifference,decodeCsv,parseCsv,csvHeaderLine,csvRowLine};
 })();
 const __weight=(()=>{
 const WEIGHT_FIELD='操作后的包裹重量(g)';
@@ -274,99 +284,63 @@ function formatKg(value){
 
 return {WEIGHT_FIELD,parseWeight,formatKg};
 })();
-const __isolation=(()=>{
+const __hash=(()=>{
+// Content hashing shared by import and export: exact-row content keys (cyrb128) and SHA-256.
 // SHA-256 implemented locally: works offline without secure-context Web Crypto.
-function sha256(text){
-  const bytes=new TextEncoder().encode(text),size=Math.ceil((bytes.length+9)/64)*64,b=new Uint8Array(size);b.set(bytes);b[bytes.length]=128;
-  const view=new DataView(b.buffer);view.setUint32(size-8,Math.floor(bytes.length/536870912));view.setUint32(size-4,bytes.length*8>>>0);
-  const k=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
-  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19],w=new Uint32Array(64),rot=(v,n)=>(v>>>n)|(v<<(32-n));
-  for(let off=0;off<size;off+=64){for(let i=0;i<16;i++)w[i]=view.getUint32(off+i*4);for(let i=16;i<64;i++)w[i]=(w[i-16]+(rot(w[i-15],7)^rot(w[i-15],18)^(w[i-15]>>>3))+w[i-7]+(rot(w[i-2],17)^rot(w[i-2],19)^(w[i-2]>>>10)))>>>0;
-    let [a,c,d,e,f,g,j,l]=h;for(let i=0;i<64;i++){const t=(l+(rot(f,6)^rot(f,11)^rot(f,25))+((f&g)^(~f&j))+k[i]+w[i])>>>0,u=((rot(a,2)^rot(a,13)^rot(a,22))+((a&c)^(a&d)^(c&d)))>>>0;l=j;j=g;g=f;f=(e+t)>>>0;e=d;d=c;c=a;a=(t+u)>>>0;}[a,c,d,e,f,g,j,l].forEach((v,i)=>h[i]=(h[i]+v)>>>0);
-  }return h.map(v=>v.toString(16).padStart(8,'0')).join('');
-}
-const recordKey=raw=>JSON.stringify(Object.keys(raw).sort().map(k=>[k,raw[k]]));
-const recordIds=new WeakMap();
-function recordId(raw){if(!recordIds.has(raw))recordIds.set(raw,sha256(recordKey(raw)));return recordIds.get(raw);}
-const fingerprints=new WeakMap();
-const confirmationIndexes=new WeakMap();
-function confirmationHas(c,id,excluded=false){if(!confirmationIndexes.has(c))confirmationIndexes.set(c,{included:new Set(c.recordIds),excluded:new Set(c.excludedRecordIds)});return confirmationIndexes.get(c)[excluded?'excluded':'included'].has(id);}
-function fileIdentity(file){if(!fingerprints.has(file))fingerprints.set(file,sha256(JSON.stringify([file.archiveHeaders||file.headers,file.rows.map(r=>recordKey(r.raw))])));return fingerprints.get(file);}
-const protectionScope=(day,area)=>JSON.stringify([day,area]);
-const rawDay=raw=>{const m=raw.完成时间?.trim().match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[ T]/);return m?m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0'):null;};
-const areaOf=raw=>raw.所属区域.trim()?raw.所属区域:'未识别区域';
-const protectedArchive=file=>/\.protected(?:[ ._-].*)?\.csv$/i.test(file.fileName);
-function createProtection(){return {risks:new Map(),scopes:new Set(),confirmations:[],restorations:new Map()};}
-function prepareProtection(files,today,requested){
-  const store=requested||files.find(f=>f.protectionStore)?.protectionStore||createProtection();
-  for(const f of files){const previous=f.protectionStore;if(previous&&previous!==store){for(const [k,v] of previous.risks)store.risks.set(k,v);for(const s of previous.scopes)store.scopes.add(s);for(const c of previous.confirmations)if(!store.confirmations.some(x=>x.id===c.id))store.confirmations.push(c);for(const [k,v] of previous.restorations)store.restorations.set(k,[...(store.restorations.get(k)||[]),...v]);}f.protectionStore=store;if(!f.importDay)f.importDay=today;
-    for(const row of f.rows){const day=rawDay(row.raw);if(day&&day>=f.importDay)store.scopes.add(protectionScope(day,areaOf(row.raw)));}
-  }
-  for(const f of files)for(const row of f.rows){const day=rawDay(row.raw),key=recordKey(row.raw),scope=protectionScope(day,areaOf(row.raw));
-    if((day&&store.scopes.has(scope))||protectedArchive(f)){
-      const code=day&&day>=f.importDay?'import_day_incomplete':protectedArchive(f)?'metadata_required':'known_incomplete_scope';
-      if(!store.risks.has(key)||(store.risks.get(key).code==='metadata_required'&&code!=='metadata_required'))store.risks.set(key,{code,scope,sourceId:fileIdentity(f),importDay:f.importDay});
+// Incremental form lets large files be fingerprinted chunk by chunk; sha256(text) output is unchanged.
+const SHA_K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+const shaEncoder=new TextEncoder();
+function createSha256(){
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19],w=new Uint32Array(64),block=new Uint8Array(64),view=new DataView(block.buffer);
+  let fill=0,total=0;
+  const compress=()=>{
+    for(let i=0;i<16;i++)w[i]=view.getUint32(i*4);
+    for(let i=16;i<64;i++){const a=w[i-15],b=w[i-2];w[i]=(w[i-16]+(((a>>>7)|(a<<25))^((a>>>18)|(a<<14))^(a>>>3))+w[i-7]+(((b>>>17)|(b<<15))^((b>>>19)|(b<<13))^(b>>>10)))>>>0;}
+    let a=h[0],c=h[1],d=h[2],e=h[3],f=h[4],g=h[5],j=h[6],l=h[7];
+    for(let i=0;i<64;i++){const t=(l+(((f>>>6)|(f<<26))^((f>>>11)|(f<<21))^((f>>>25)|(f<<7)))+((f&g)^(~f&j))+SHA_K[i]+w[i])>>>0,u=((((a>>>2)|(a<<30))^((a>>>13)|(a<<19))^((a>>>22)|(a<<10)))+((a&c)^(a&d)^(c&d)))>>>0;l=j;j=g;g=f;f=(e+t)>>>0;e=d;d=c;c=a;a=(t+u)>>>0;}
+    h[0]=(h[0]+a)>>>0;h[1]=(h[1]+c)>>>0;h[2]=(h[2]+d)>>>0;h[3]=(h[3]+e)>>>0;h[4]=(h[4]+f)>>>0;h[5]=(h[5]+g)>>>0;h[6]=(h[6]+j)>>>0;h[7]=(h[7]+l)>>>0;
+  };
+  const api={
+    update(bytes){total+=bytes.length;let i=0;while(i<bytes.length){const n=Math.min(64-fill,bytes.length-i);block.set(bytes.subarray(i,i+n),fill);fill+=n;i+=n;if(fill===64){compress();fill=0;}}return api;},
+    updateText(text){return api.update(shaEncoder.encode(text));},
+    digest(){
+      const bits=total*8;block[fill++]=128;
+      if(fill>56){block.fill(0,fill);compress();fill=0;}
+      block.fill(0,fill,56);view.setUint32(56,Math.floor(bits/4294967296));view.setUint32(60,bits>>>0);compress();
+      return h.map(v=>v.toString(16).padStart(8,'0')).join('');
     }
-  }return store;
+  };
+  return api;
 }
-function qualifyRecord(record,files,store){
-  const key=recordKey(record.raw),scope=protectionScope(record.finishDay,record.area),matching=files.filter(f=>record.sources.some(s=>s.fileId===f.fileId));
-  const local=store.confirmations.filter(c=>c.scope===scope&&c.scope===protectionScope(c.day,c.area)&&c.acknowledged===true&&c.type==='user_confirmed_source'&&Number.isFinite(Date.parse(c.verifiedAt))&&c.id===sha256(JSON.stringify([c.scope,c.sourceId]))&&files.some(f=>fileIdentity(f)===c.sourceId));
-  const applicable=local.filter(c=>confirmationHas(c,recordId(record.raw))&&matching.some(f=>fileIdentity(f)===c.sourceId));
-  if(applicable.length){record.protection={decision:'confirmed',reason:'manual_verification',confirmations:applicable};record.isolated=false;return;}
-  const restored=matching.flatMap(f=>(store.restorations.get(fileIdentity(f))||[]).flatMap(m=>{if(!metadataIndexes.has(m))metadataIndexes.set(m,new Map(m.states.map(s=>[s.recordId,s])));const s=metadataIndexes.get(m).get(recordId(record.raw));return s?[{...s,confirmations:m.confirmations.filter(c=>s.confirmationIds.includes(c.id))}]:[];}));
-  const decisions=new Set(restored.map(s=>s.decision)),conflict=decisions.size>1;
-  const risk=store.risks.get(key),exclusions=local.filter(c=>confirmationHas(c,recordId(record.raw),true));
-  // Only explicit, active source-version evidence can supersede restored pending.
-  // Conflicting metadata remains pending; exclusion never grants formal eligibility.
-  if(!conflict&&exclusions.length&&restored.some(s=>s.decision==='pending')){record.isolated=true;record.excludedFromAttendance=true;record.protection={decision:'excluded',reason:'manual_verification_exclusion',basis:risk||restored[0].basis,confirmations:exclusions};return;}
-  if(restored.length&&!conflict){const value=restored[0],knownRisk=store.risks.get(key);if(value.decision!=='eligible'||!knownRisk||knownRisk.code==='metadata_required'){record.protection=value;record.isolated=!['confirmed','eligible'].includes(value.decision);record.excludedFromAttendance=value.decision==='excluded';return;}}
-  if(risk||conflict){const excluded=Boolean(risk&&exclusions.length&&!conflict);record.isolated=true;record.excludedFromAttendance=excluded;record.protection={decision:excluded?'excluded':'pending',reason:conflict?'metadata_state_conflict':risk.code,basis:risk,confirmations:excluded?exclusions:[]};}
-  else record.isolated=false;
+function sha256(text){return createSha256().updateText(text).digest();}
+const recordKey=raw=>JSON.stringify(Object.keys(raw).sort().map(k=>[k,raw[k]]));
+// Fast 128-bit content key (cyrb128) of the complete row text, used for exact-duplicate matching.
+// Two rows share a key only when every column value is identical (collision chance negligible at millions of rows).
+function contentKey(text){
+  let h1=1779033703,h2=3144134277,h3=1013904242,h4=2773480762;
+  for(let i=0,k;i<text.length;i++){k=text.charCodeAt(i);h1=h2^Math.imul(h1^k,597399067);h2=h3^Math.imul(h2^k,2869860233);h3=h4^Math.imul(h3^k,951274213);h4=h1^Math.imul(h4^k,2716044179);}
+  h1=Math.imul(h3^(h1>>>18),597399067);h2=Math.imul(h4^(h2>>>22),2869860233);h3=Math.imul(h1^(h3>>>17),951274213);h4=Math.imul(h2^(h4>>>19),2716044179);
+  h1^=(h2^h3^h4);h2^=h1;h3^=h1;h4^=h1;
+  return [h1,h2,h3,h4].map(v=>(v>>>0).toString(16).padStart(8,'0')).join('');
 }
-const metadataIndexes=new WeakMap();
-function createIsolationMetadata(archive,dataset){
-  if(archive.blocked)throw new Error('结构冲突，不能生成保护元数据');
-  if(!dataset.records.some(r=>r.protection)&&!dataset.issues.some(i=>i.code==='task_conflict'))return null;
-  const byKey=new Map(dataset.records.map(r=>[recordKey(r.raw),r])),byDataId=new Map(dataset.records.map(r=>[r.id,r])),confirmations=new Map();
-  const states=archive.entries.map(({row})=>{const r=byKey.get(recordKey(row.raw)),p=r?.protection;
-    for(const c of p?.confirmations||[])confirmations.set(c.id,c);
-    return {recordId:recordId(row.raw),day:r?.finishDay||null,area:r?.area||areaOf(row.raw),decision:p?.decision||'eligible',reason:p?.reason||'ordinary_historical',basis:p?.basis||null,confirmationIds:(p?.confirmations||[]).map(c=>c.id),sources:r?.sources||[row.source]};
-  });
-  const bound={archiveHeaders:archive.headers,headers:archive.headers.map(h=>h.trim()),rows:archive.entries.map(e=>e.row)};
-  const body={format:'warehouse-isolation',version:1,archiveId:fileIdentity(bound),headerId:sha256(JSON.stringify(archive.headers)),recordCount:states.length,range:archive.range,createdAt:new Date().toISOString(),states,confirmations:[...confirmations.values()],conflicts:dataset.issues.filter(i=>i.code==='task_conflict').map(i=>({code:i.code,recordId:recordId(byDataId.get(i.recordId).raw)}))};
-  return {...body,integrity:sha256(JSON.stringify(body))};
-}
-function restoreIsolationMetadata(file,metadata,store){
-  const fail=()=>{throw new Error('配套元数据损坏、版本不兼容或与CSV内容不匹配，未应用状态');};
-  if(!metadata||metadata.format!=='warehouse-isolation'||metadata.version!==1||!Array.isArray(metadata.states)||!Array.isArray(metadata.confirmations)||!Array.isArray(metadata.conflicts))fail();
-  const {integrity,...body}=metadata;if(sha256(JSON.stringify(body))!==integrity||metadata.archiveId!==fileIdentity(file)||metadata.headerId!==sha256(JSON.stringify(file.archiveHeaders||file.headers))||metadata.recordCount!==file.rows.length||metadata.states.length!==file.rows.length||file.errors.length)fail();
-  const rawById=new Map(file.rows.map(row=>[recordId(row.raw),row.raw])),used=new Set(),confirmations=new Map();
-  for(const c of metadata.confirmations){if(!c||c.acknowledged!==true||c.type!=='user_confirmed_source'||!Number.isFinite(Date.parse(c.verifiedAt))||typeof c.note!=='string'||!Array.isArray(c.recordIds)||!Array.isArray(c.excludedRecordIds)||c.scope!==protectionScope(c.day,c.area)||!/^[a-f0-9]{64}$/.test(c.sourceId)||c.id!==sha256(JSON.stringify([c.scope,c.sourceId]))||confirmations.has(c.id))fail();confirmations.set(c.id,c);}
-  for(const s of metadata.states){const raw=rawById.get(s.recordId);if(!raw||used.has(s.recordId)||!['pending','confirmed','excluded','eligible'].includes(s.decision)||typeof s.reason!=='string'||!Array.isArray(s.confirmationIds)||!Array.isArray(s.sources)||s.area!==areaOf(raw)||(s.day!==null&&s.day!==rawDay(raw)))fail();used.add(s.recordId);
-    const refs=s.confirmationIds.map(id=>confirmations.get(id));if(refs.some(c=>!c||c.scope!==protectionScope(s.day,s.area))||(['confirmed','excluded'].includes(s.decision)&&!refs.length)||(s.decision==='confirmed'&&!refs.some(c=>confirmationHas(c,s.recordId)))||(s.decision==='excluded'&&!refs.some(c=>confirmationHas(c,s.recordId,true))))fail();
-  }
-  const previous=store.restorations.get(fileIdentity(file))||[];if(!previous.some(m=>m.integrity===integrity))store.restorations.set(fileIdentity(file),[...previous,JSON.parse(JSON.stringify(metadata))]);
-  for(const s of metadata.states)if(s.decision==='pending'||s.decision==='excluded')store.scopes.add(protectionScope(s.day,s.area));
-  return metadata.states.length;
-}
-function confirmSource(dataset,{fileId,day,area,acknowledged,note='',verifiedAt=new Date().toISOString()}){
-  if(acknowledged!==true)throw new Error('请主动确认该来源已人工核实');
-  const file=dataset.files.find(f=>f.fileId===fileId);if(!file||file.errors.length)throw new Error('来源不存在或包含解析错误，不能核实');
-  const matching=dataset.records.filter(r=>r.finishDay===day&&r.area===area&&r.sources.some(s=>s.fileId===fileId));
-  if(!matching.length||!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(Date.parse(verifiedAt)))throw new Error('核实范围无有效记录');
-  const scope=protectionScope(day,area),sourceId=fileIdentity(file),id=sha256(JSON.stringify([scope,sourceId]));
-  const existing=dataset.protectionStore.confirmations.find(c=>c.id===id);if(existing)return existing;
-  const entry={id,scope,day,area,sourceId,fileName:file.fileName,recordIds:matching.map(r=>recordId(r.raw)).sort(),excludedRecordIds:dataset.records.filter(r=>r.isolated&&r.finishDay===day&&r.area===area&&!matching.includes(r)).map(r=>recordId(r.raw)).sort(),verifiedAt,type:'user_confirmed_source',acknowledged:true,note:String(note).slice(0,500)};
-  dataset.protectionStore.confirmations.push(entry);return entry;
-}
+const rowKeys=new WeakMap();
+function rowKey(raw){const primed=raw[Symbol.for('warehouse.rowKey')];if(primed!==undefined)return primed;let k=rowKeys.get(raw);if(k===undefined){k=contentKey(recordKey(raw));rowKeys.set(raw,k);}return k;}
+function primeRowKey(raw,key){raw[Symbol.for('warehouse.rowKey')]=key;}
+const recordIds=new WeakMap();
+// Streaming import computes the identical id from the complete row before dropping unused text columns.
+// Precomputed values are attached under registry symbols: invisible to Object.keys/JSON, shared by every copy of this module.
+const PRIMED_ID=Symbol.for('warehouse.recordId');
+function recordId(raw){const primed=raw[PRIMED_ID];if(primed!==undefined)return primed;if(!recordIds.has(raw))recordIds.set(raw,sha256(recordKey(raw)));return recordIds.get(raw);}
+function primeRecordId(raw,id){raw[PRIMED_ID]=id;}
 
-return {sha256,recordKey,recordId,fileIdentity,protectionScope,createProtection,prepareProtection,qualifyRecord,createIsolationMetadata,restoreIsolationMetadata,confirmSource};
+return {createSha256,sha256,recordKey,contentKey,rowKey,primeRowKey,recordId,primeRecordId};
 })();
-const __data=(()=>{
+const __rules=(()=>{
+// Per-row business rules shared by every import path: date parsing and the assessment of one CSV row.
+// Statistics rules live here once; both the reference record path and the aggregate path call assessRow.
 const {parseWeight,WEIGHT_FIELD}=__weight;
-const {prepareProtection,qualifyRecord}=__isolation;
-/** Business timestamps use UTC arithmetic solely to preserve literal calendar dates. */
+
+/** Business timestamps use UTC arithmetic solely to preserve literal calendar dates (no time-zone shift). */
 function parseStamp(value){
   const m=String(value??'').trim().match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/);
   if(!m)return null;
@@ -375,89 +349,85 @@ function parseStamp(value){
   const t=Date.UTC(y,mo-1,d,h,mi,s),dt=new Date(t);
   return dt.getUTCFullYear()===y&&dt.getUTCMonth()===mo-1&&dt.getUTCDate()===d?t:null;
 }
-function stampDay(t){return t===null?null:new Date(t).toISOString().slice(0,10);}
+// Calendar-day text cached per day index; same output as toISOString().slice(0,10).
+const dayTexts=new Map();
+function stampDay(t){if(t===null)return null;const n=Math.floor(t/86400000);let s=dayTexts.get(n);if(s===undefined){s=new Date(t).toISOString().slice(0,10);dayTexts.set(n,s);}return s;}
 function stampText(t){return t===null?'':new Date(t).toISOString().slice(0,19).replace('T',' ');}
-
 function japanDate(now=new Date()){
   return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
 }
-function buildDataset(files,options={}){
-  const today=options.japanDay||japanDate();
-  const protectionStore=prepareProtection(files,today,options.protectionStore);
-  const records=[],issues=files.flatMap(f=>f.errors),seen=new Map();let duplicateCount=0;
-  for(const f of files){
-    // Freeze import provenance, so midnight or removing another file cannot release isolation.
-    if(!f.importDay)f.importDay=today;
-    for(const {raw,source} of f.rows){
-    const key=JSON.stringify(Object.keys(raw).sort().map(k=>[k,raw[k]]));
-    if(seen.has(key)){
-      const r=seen.get(key);r.sources.push(source);duplicateCount++;
-      issues.push({code:'duplicate',message:'完全相同的作业记录，统计只计一次',recordId:r.id,sources:[source],finishDay:r.finishDay,area:r.area,operator:r.operator,rawValue:null,effectiveValue:null});continue;
-    }
-    const finishStamp=parseStamp(raw.完成时间),acceptStamp=parseStamp(raw.接单时间);
-    const r={id:'r'+records.length,raw,sources:[source],finishDay:stampDay(finishStamp),finishStamp,acceptStamp,operator:raw.操作员.trim()?raw.操作员:'未识别操作员',area:raw.所属区域.trim()?raw.所属区域:'未识别区域',type:raw.任务小类.trim()?raw.任务小类:'未识别任务',packages:null};
-    r.isolated=Boolean(r.finishDay&&r.finishDay>=f.importDay);
-    const issue=(code,message,rawValue=null,effectiveValue=null)=>issues.push({code,message,recordId:r.id,sources:r.sources,finishDay:r.finishDay,area:r.area,operator:r.operator,rawValue,effectiveValue});
-    const weight=parseWeight(raw[WEIGHT_FIELD]);r.weightGrams=weight.grams;
-    if(weight.reason)issue('weight_invalid',weight.reason+'；重量合计仅包含有效值',raw[WEIGHT_FIELD]??'');
-    if(finishStamp===null)issue('finish_invalid','完成时间缺失或无法识别；不进入日期统计',raw.完成时间);
-    if(acceptStamp===null)issue('accept_invalid','接单时间缺失或无法识别；出勤信息不完整',raw.接单时间);
-    if(!raw.操作员.trim())issue('operator_missing','操作员缺失，归入未识别操作员');
-    if(!raw.所属区域.trim())issue('area_missing','所属区域缺失，归入未识别区域');
-    if(!raw.任务编号.trim())issue('task_missing','任务编号缺失，保留作业并请核实');
-    if(!raw.任务小类.trim())issue('type_missing','任务小类缺失，归入未识别任务');
-    if(acceptStamp!==null&&finishStamp!==null){
-      if(acceptStamp>finishStamp)issue('time_reversed','接单时间晚于完成时间，不据此推定作业跨度');
-      else if(stampDay(acceptStamp)!==r.finishDay)issue('cross_day','跨日作业，完成单量归完成日期，时间观察保留跨日标记');
-      const seconds=raw.任务耗时?.trim();
-      if(seconds&&(!Number.isFinite(Number(seconds))||Number(seconds)<0||Number(seconds)!==(finishStamp-acceptStamp)/1000))issue('duration_mismatch','任务耗时与接单至完成的秒数不一致',seconds);
-    }
-    const value=raw.关联包裹数.trim();const n=value===''?NaN:Number(value);
-    const valid=Number.isSafeInteger(n)&&n>=0;
-    if(r.type==='单箱增值'){
-      r.packages=valid?Math.max(n,1):1;
-      if(!valid||n<1)issue('package_adjusted','单箱增值关联包裹数至少计1',raw.关联包裹数,r.packages);
-    }else if(valid){r.packages=n;if(n===0)issue('package_zero','非单箱增值关联包裹数为0，请核实',value,0);}
-    else issue('package_unknown','关联包裹数未知，作业单量仍计入，包裹合计暂不包含此项',raw.关联包裹数);
-    records.push(r);seen.set(key,r);
-  }}
-  const tasks=new Map();
-  for(const r of records)qualifyRecord(r,files,protectionStore);
-  for(const r of records){const task=r.raw.任务编号;if(!task.trim())continue;const group=tasks.get(task)||[];group.push(r);tasks.set(task,group);}
-  for(const group of tasks.values())if(group.length>1)for(const r of group)issues.push({code:'task_conflict',message:'同任务编号存在不同记录，全部保留，请核实',recordId:r.id,sources:r.sources,finishDay:r.finishDay,area:r.area,operator:r.operator});
-  for(const r of records)if(r.isolated)issues.push({code:'incomplete_day',message:r.excludedFromAttendance?'旧版记录已按明确核实范围排除，原始归档仍保留':'记录处于隔离状态，不参与正式统计；请恢复配套元数据或明确核实指定来源，日期变化或重复导入不能解除隔离',recordId:r.id,sources:r.sources,finishDay:r.finishDay,area:r.area,operator:r.operator});
-  const days=records.filter(r=>!r.isolated).map(r=>r.finishDay).filter(Boolean).sort(),rawDays=records.map(r=>r.finishDay).filter(Boolean).sort();
-  return {files,records,issues,duplicateCount,protectionStore,sameNameIsIdentity:options.sameNameIsIdentity!==false,isolatedCount:records.filter(r=>r.isolated).length,range:days.length?{start:days[0],end:days.at(-1)}:null,rawRange:rawDays.length?{start:rawDays[0],end:rawDays.at(-1)}:null};
+function previousDay(day){return new Date(Date.parse(day+'T00:00:00Z')-86400000).toISOString().slice(0,10);}
+
+// Issue codes produced for one row, in the order the dashboard has always listed them.
+const ROW_ISSUES=['weight_invalid','finish_invalid','accept_invalid','operator_missing','area_missing','task_missing','type_missing','time_reversed','cross_day','duration_mismatch','package_adjusted','package_zero','package_unknown'];
+
+// Assess one row (raw: column name → original text). Returns derived values plus issues
+// as [code,message,rawValue,effectiveValue] in display order.
+function assessRow(raw){
+  const finishStamp=parseStamp(raw.完成时间),acceptStamp=parseStamp(raw.接单时间),finishDay=stampDay(finishStamp);
+  const operator=raw.操作员.trim()?raw.操作员:'未识别操作员',area=raw.所属区域.trim()?raw.所属区域:'未识别区域',type=raw.任务小类.trim()?raw.任务小类:'未识别任务';
+  const issues=[],issue=(code,message,rawValue=null,effectiveValue=null)=>issues.push([code,message,rawValue,effectiveValue]);
+  const weight=parseWeight(raw[WEIGHT_FIELD]);
+  if(weight.reason)issue('weight_invalid',weight.reason+'；重量合计仅包含有效值',raw[WEIGHT_FIELD]??'');
+  if(finishStamp===null)issue('finish_invalid','完成时间缺失或无法识别；不进入日期统计',raw.完成时间);
+  if(acceptStamp===null)issue('accept_invalid','接单时间缺失或无法识别；出勤信息不完整',raw.接单时间);
+  if(!raw.操作员.trim())issue('operator_missing','操作员缺失，归入未识别操作员');
+  if(!raw.所属区域.trim())issue('area_missing','所属区域缺失，归入未识别区域');
+  if(!raw.任务编号.trim())issue('task_missing','任务编号缺失，保留作业并请核实');
+  if(!raw.任务小类.trim())issue('type_missing','任务小类缺失，归入未识别任务');
+  if(acceptStamp!==null&&finishStamp!==null){
+    if(acceptStamp>finishStamp)issue('time_reversed','接单时间晚于完成时间，不据此推定作业跨度');
+    else if(stampDay(acceptStamp)!==finishDay)issue('cross_day','跨日作业，完成单量归完成日期，时间观察保留跨日标记');
+    const seconds=raw.任务耗时?.trim();
+    if(seconds&&(!Number.isFinite(Number(seconds))||Number(seconds)<0||Number(seconds)!==(finishStamp-acceptStamp)/1000))issue('duration_mismatch','任务耗时与接单至完成的秒数不一致',seconds);
+  }
+  let packages=null;
+  const value=raw.关联包裹数.trim();const n=value===''?NaN:Number(value);
+  const valid=Number.isSafeInteger(n)&&n>=0;
+  if(type==='单箱增值'){
+    packages=valid?Math.max(n,1):1;
+    if(!valid||n<1)issue('package_adjusted','单箱增值关联包裹数至少计1',raw.关联包裹数,packages);
+  }else if(valid){packages=n;if(n===0)issue('package_zero','非单箱增值关联包裹数为0，请核实',value,0);}
+  else issue('package_unknown','关联包裹数未知，作业单量仍计入，包裹合计暂不包含此项',raw.关联包裹数);
+  return {finishStamp,acceptStamp,finishDay,operator,area,type,packages,weightGrams:weight.grams,weightReason:weight.reason,operatorBlank:!raw.操作员.trim(),issues};
 }
 
-return {parseStamp,stampDay,stampText,japanDate,buildDataset};
+return {parseStamp,stampDay,stampText,japanDate,previousDay,ROW_ISSUES,assessRow};
 })();
 const __stats=(()=>{
-const {parseStamp,stampDay}=__data;
+const {parseStamp,stampDay}=__rules;
 const DAY_MS=86400000;
 // Date is shared; area and person selectors have independent analysis scopes.
 const areaFilters=filters=>({...filters,operator:null});
 const personFilters=filters=>({...filters,area:null});
 function dailyAreaContributions(records){
   const days=new Map();
-  for(const r of records){if(r.isolated||!r.finishDay)continue;const areas=days.get(r.finishDay)||new Map();areas.set(r.area,(areas.get(r.area)||0)+1);days.set(r.finishDay,areas);}
+  for(const r of records){if(!r.finishDay)continue;const areas=days.get(r.finishDay)||new Map();areas.set(r.area,(areas.get(r.area)||0)+1);days.set(r.finishDay,areas);}
   return new Map([...days].map(([day,areas])=>[day,[...areas].sort(([a],[b])=>a.localeCompare(b,'zh-CN')).map(([area,orders])=>({area,orders}))]));
 }
 const contributionText=areas=>(areas||[]).map(r=>r.area+'区'+r.orders).join('＋');
+// Valid day stamps are cached; invalid input still throws the same errors every time.
+const dayStamps=new Map();
 function dayStamp(day){
+  const cached=dayStamps.get(day);if(cached!==undefined)return cached;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(day??''))throw new Error('日期格式错误');
-  const t=parseStamp(day+' 00:00:00');if(t===null)throw new Error('日期不存在');return t;
+  const t=parseStamp(day+' 00:00:00');if(t===null)throw new Error('日期不存在');dayStamps.set(day,t);return t;
 }
 function dateDays(start,end){
   const a=dayStamp(start),b=dayStamp(end);if(a>b)throw new Error('开始日期不能晚于结束日期');
   const out=[];for(let t=a;t<=b;t+=DAY_MS)out.push(stampDay(t));return out;
 }
+// Filtered record lists and summaries are cached per dataset/filter; callers treat them as read-only.
+const selected=new WeakMap();
 function selectRecords(dataset,filters){
   dateDays(filters.start,filters.end);
-  return dataset.records.filter(r=>!r.isolated&&r.finishDay&&r.finishDay>=filters.start&&r.finishDay<=filters.end&&(!filters.area||r.area===filters.area)&&(!filters.operator||r.operator===filters.operator));
+  const key=JSON.stringify([filters.start,filters.end,filters.area||null,filters.operator||null]);let cache=selected.get(dataset);
+  if(!cache){cache=new Map();selected.set(dataset,cache);}
+  if(!cache.has(key))cache.set(key,dataset.records.filter(r=>r.finishDay&&r.finishDay>=filters.start&&r.finishDay<=filters.end&&(!filters.area||r.area===filters.area)&&(!filters.operator||r.operator===filters.operator)));
+  return cache.get(key);
 }
 function selectDetailRecords(dataset,filters){
-  return dataset.records.filter(r=>r.finishDay&&(r.isolated||r.finishDay>=filters.start&&r.finishDay<=filters.end)&&(!filters.area||r.area===filters.area)&&(!filters.operator||r.operator===filters.operator));
+  return dataset.records.filter(r=>r.finishDay&&r.finishDay>=filters.start&&r.finishDay<=filters.end&&(!filters.area||r.area===filters.area)&&(!filters.operator||r.operator===filters.operator));
 }
 function emptyTotals(){return {orders:0,packagesKnown:0,packagesUnknown:0,weightGrams:0,weightCompensation:0,weightValid:0,weightUnknown:0,days:new Set(),areas:new Set(),types:new Map()};}
 function add(t,r){
@@ -467,17 +437,27 @@ function add(t,r){
   t.days.add(r.finishDay);t.areas.add(r.area);t.types.set(r.type,(t.types.get(r.type)||0)+1);
 }
 function finish(t){return {orders:t.orders,packagesKnown:t.packagesKnown,packagesUnknown:t.packagesUnknown,weightKg:t.orders===0?0:t.weightValid?t.weightGrams/1000:null,weightValid:t.weightValid,weightUnknown:t.weightUnknown,recordDays:t.days.size,areas:[...t.areas].sort(),types:Object.fromEntries(t.types)};}
-function period(day,grain){
+// Period boundaries cached per day and grain; values are read-only.
+const periods=new Map();
+function period(day,grain){const k=grain+'|'+day;let p=periods.get(k);if(!p){p=computePeriod(day,grain);periods.set(k,p);}return p;}
+function computePeriod(day,grain){
   const t=dayStamp(day),d=new Date(t);
   if(grain==='week'){const a=t-((d.getUTCDay()+6)%7)*DAY_MS;return {key:stampDay(a),naturalStart:stampDay(a),naturalEnd:stampDay(a+6*DAY_MS)};}
   if(grain==='month'){const a=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),1),b=Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0);return {key:day.slice(0,7),naturalStart:stampDay(a),naturalEnd:stampDay(b)};}
   return {key:day,naturalStart:day,naturalEnd:day};
 }
+const summaries=new WeakMap();
 function summarize(records,filters){
+  const key=JSON.stringify([filters.start,filters.end,filters.grain]);let cache=summaries.get(records);
+  if(!cache){cache=new Map();summaries.set(records,cache);}
+  if(!cache.has(key))cache.set(key,computeSummary(records,filters));
+  return cache.get(key);
+}
+function computeSummary(records,filters){
   const days=dateDays(filters.start,filters.end),total=emptyTotals(),byArea=new Map(),byOperator=new Map(),byType=new Map(),buckets=new Map();
   for(const day of days){const p=period(day,filters.grain);if(!buckets.has(p.key))buckets.set(p.key,{...p,start:p.naturalStart<filters.start?filters.start:p.naturalStart,end:p.naturalEnd>filters.end?filters.end:p.naturalEnd,totals:emptyTotals()});}
   for(const r of records){
-    if(r.isolated||!r.finishDay||r.finishDay<filters.start||r.finishDay>filters.end)continue;
+    if(!r.finishDay||r.finishDay<filters.start||r.finishDay>filters.end)continue;
     add(total,r);
     for(const [map,key]of[[byArea,r.area],[byOperator,r.operator],[byType,r.type]]){if(!map.has(key))map.set(key,emptyTotals());add(map.get(key),r);}
     add(buckets.get(period(r.finishDay,filters.grain).key).totals,r);
@@ -486,32 +466,32 @@ function summarize(records,filters){
   return {...finish(total),byArea:groups(byArea),byOperator:groups(byOperator),byType:groups(byType),buckets:[...buckets.values()].map(b=>({key:b.key,start:b.start,end:b.end,partial:b.start!==b.naturalStart||b.end!==b.naturalEnd,...finish(b.totals)}))};
 }
 function classifyMissingDays(records,start,end){
-  const present=new Set(records.filter(r=>!r.isolated).map(r=>r.finishDay));
+  const present=new Set(records.map(r=>r.finishDay));
   return dateDays(start,end).filter(day=>!present.has(day)).map(day=>{const weekday=new Date(dayStamp(day)).getUTCDay();return {day,weekday,kind:weekday===0||weekday===6?'weekend':'weekday'};});
 }
 function reconcileFilters(dataset,previous,wasFullRange,grainManual){
   const range=dataset.range||dataset.rawRange;
   if(!range)return {filters:null,notice:'暂无可按完成日期统计的数据，请查看数据检查'};
-  const notices=dataset.range?[]:['当前数据全部已隔离，不参与正式统计；可查看作业记录明细和数据检查'];let filters={start:range.start,end:range.end,area:null,operator:null,grain:'day',...previous};
+  const notices=[];let filters={start:range.start,end:range.end,area:null,operator:null,grain:'day',...previous};
   if(!previous||wasFullRange){filters.start=range.start;filters.end=range.end;}
   else{
     if(filters.end<range.start||filters.start>range.end){filters.start=range.start;filters.end=range.end;notices.push('原日期与新数据无重叠，已恢复全部日期');}
     else {const old=filters.start+'～'+filters.end;filters.start=filters.start<range.start?range.start:filters.start;filters.end=filters.end>range.end?range.end:filters.end;if(old!==filters.start+'～'+filters.end)notices.push('日期已调整为新数据范围内的重叠部分');}
   }
-  if(filters.area&&!dataset.records.some(r=>r.area===filters.area)){filters.area=null;notices.push('原区域已无记录，恢复全部区域');}
-  if(filters.operator&&!dataset.records.some(r=>r.operator===filters.operator)){filters.operator=null;notices.push('原操作员已无记录，恢复全部操作员');}
+  const hasArea=a=>dataset.hasArea?dataset.hasArea(a):dataset.records.some(r=>r.area===a),hasOperator=o=>dataset.hasOperator?dataset.hasOperator(o):dataset.records.some(r=>r.operator===o);
+  if(filters.area&&!hasArea(filters.area)){filters.area=null;notices.push('原区域已无记录，恢复全部区域');}
+  if(filters.operator&&!hasOperator(filters.operator)){filters.operator=null;notices.push('原操作员已无记录，恢复全部操作员');}
   if(!grainManual){const count=dateDays(filters.start,filters.end).length;filters.grain=count<=45?'day':count<=180?'week':'month';}
   return {filters,notice:notices.join('；')||null};
 }
 function scopedIssues(dataset,filters){
-  const isolatedIds=new Set(dataset.records.filter(r=>r.isolated).map(r=>r.id));
-  return dataset.issues.filter(i=>(isolatedIds.has(i.recordId)||i.code==='incomplete_day'||!i.finishDay||(i.finishDay>=filters.start&&i.finishDay<=filters.end))&&(!filters.area||!i.area||i.area===filters.area)&&(!filters.operator||!i.operator||i.operator===filters.operator));
+  return dataset.issues.filter(i=>(!i.finishDay||(i.finishDay>=filters.start&&i.finishDay<=filters.end))&&(!filters.area||!i.area||i.area===filters.area)&&(!filters.operator||!i.operator||i.operator===filters.operator));
 }
 
-return {DAY_MS,areaFilters,personFilters,dailyAreaContributions,contributionText,dayStamp,dateDays,selectRecords,selectDetailRecords,summarize,classifyMissingDays,reconcileFilters,scopedIssues};
+return {DAY_MS,areaFilters,personFilters,dailyAreaContributions,contributionText,dayStamp,dateDays,selectRecords,selectDetailRecords,period,summarize,classifyMissingDays,reconcileFilters,scopedIssues};
 })();
 const __attendance=(()=>{
-const {stampDay,stampText}=__data;
+const {stampDay,stampText}=__rules;
 const {dayStamp,DAY_MS}=__stats;
 const ATTENDANCE_RULES={start:36000,end:68400,lunchStart:46800,lunchEnd:50400,normalEnd:67500,lateThreshold:69000,minRecords:3,minSpan:2700,maxGap:7200};
 function adjustedGap(a,b){
@@ -569,42 +549,74 @@ function classifyAttendance(o){
   const overtime=unreliable?{earlyOvertimeMinutes:0,lateOvertimeMinutes:0,totalOvertimeMinutes:0}:overtimeMinutes(first,last,o.day);
   return {status,morningEvidence,afternoonEvidence,abnormalGap,gapEvents,boundaryDiagnostics,...overtime,needsVerification:status==='待核实',pendingReasons:[...new Set(reasons)],reasonCodes:[...new Set(codes)],validFirstAccept:first===null?null:stampText(first),validLastFinish:last===null?null:stampText(last),validRecordCount:starts.length};
 }
+// Results are cached per dataset and date/operator scope; a rebuilt dataset starts a new cache.
+const observed=new WeakMap();
 function observeDays(dataset,filters){
+  const key=JSON.stringify([filters.start,filters.end,filters.operator||null]);let cache=observed.get(dataset);
+  if(!cache){cache=new Map();observed.set(dataset,cache);}
+  if(!cache.has(key)){const steps=observeSteps(dataset,filters);let step;do step=steps.next();while(!step.done);cache.set(key,step.value);}
+  return cache.get(key);
+}
+// Same computation in slices, so a large first view can be prepared without freezing the page.
+async function prewarmObserveDays(dataset,filters,yieldControl=()=>new Promise(r=>setTimeout(r,0))){
+  const key=JSON.stringify([filters.start,filters.end,filters.operator||null]);let cache=observed.get(dataset);
+  if(!cache){cache=new Map();observed.set(dataset,cache);}
+  if(cache.has(key))return;
+  const steps=observeSteps(dataset,filters);for(;;){const step=steps.next();if(step.done){cache.set(key,step.value);return;}await yieldControl();}
+}
+const OBSERVE_SLICE=20000;
+// Internal grouping key: same grouping as JSON.stringify of the parts, cheaper per record.
+const groupKey=(...parts)=>parts.some(p=>typeof p==='string'&&p.includes('\u0000'))?'\u0001'+JSON.stringify(parts):parts.map(p=>p===null?'\u0002':p).join('\u0000');
+const utcHour=t=>Math.floor(((t%86400000)+86400000)%86400000/3600000);
+function* observeSteps(dataset,filters){
   const map=new Map(),dailyAreas=new Map();
   const get=(day,r)=>{
-    const personDay=JSON.stringify([day,r.operator]),areas=dailyAreas.get(personDay)||new Set();areas.add(r.area);dailyAreas.set(personDay,areas);
+    const personDay=groupKey(day,r.operator),areas=dailyAreas.get(personDay)||new Set();areas.add(r.area);dailyAreas.set(personDay,areas);
     const confirmed=dataset.sameNameIsIdentity!==false&&Boolean(r.raw.操作员.trim());
-    const key=JSON.stringify([day,r.operator,confirmed?null:r.area]);
-    if(!map.has(key))map.set(key,{day,operator:r.operator,operatorId:r.operator,identityKey:JSON.stringify([r.operator,confirmed?null:r.area]),area:r.area,areas:new Set(),sources:[],firstAccept:null,lastFinish:null,spanSeconds:null,acceptHours:Array(24).fill(0),finishHours:Array(24).fill(0),labels:[],issues:[],reasonCodes:[],recordCount:0,acceptEvents:[],finishEvents:[],validStarts:[],validEnds:[],validRecords:[],cross:false,timeInvalid:false,incomplete:false,identityAmbiguous:false});
+    const key=groupKey(day,r.operator,confirmed?null:r.area);
+    if(!map.has(key))map.set(key,newObservation(day,r,confirmed));
     return map.get(key);
   };
+  let seen=0;
   for(const record of dataset.records){
+    if(++seen%OBSERVE_SLICE===0)yield;
     if(record.excludedFromAttendance)continue;
     if(filters.operator&&record.operator!==filters.operator)continue;
     const a=record.acceptStamp,b=record.finishStamp,ad=stampDay(a),bd=stampDay(b),valid=a!==null&&b!==null&&a<=b,cross=valid&&ad!==bd;
-    const days=new Set([ad,bd].filter(day=>day&&day>=filters.start&&day<=filters.end));
-    for(const day of days){
-      const o=get(day,record);o.recordCount++;o.areas.add(record.area);o.sources.push(...record.sources);
-      if(a!==null&&ad===day){o.acceptEvents.push(a);o.acceptHours[new Date(a).getUTCHours()]++;}
-      if(b!==null&&bd===day){o.finishEvents.push(b);o.finishHours[new Date(b).getUTCHours()]++;}
-      if(valid&&!cross){o.validStarts.push(a);o.validEnds.push(b);o.validRecords.push(record);}
-      if(cross){o.cross=true;o.labels.push('跨日作业');o.issues.push('跨日期任务影响当天出勤判定');o.reasonCodes.push('cross_day');}
-      if(!valid){o.timeInvalid=true;o.issues.push(a===null?'接单时间缺失或不可识别':b===null?'完成时间缺失或不可识别':'接单时间晚于完成时间');o.reasonCodes.push('time_invalid');}
-      if(record.isolated){o.incomplete=true;o.issues.push('当前日期数据可能不完整，已隔离');o.reasonCodes.push('incomplete_day');}
-      if(!record.raw.操作员.trim()){o.identityAmbiguous=true;o.issues.push('操作员缺失，无法确认身份');o.reasonCodes.push('identity_missing');}
-    }
+    // Accept day and finish day, each once, when inside the range (same as a Set of both).
+    const days=[];if(ad&&ad>=filters.start&&ad<=filters.end)days.push(ad);if(bd!==ad&&bd&&bd>=filters.start&&bd<=filters.end)days.push(bd);
+    for(const day of days)accumulateObservation(get(day,record),record,day);
   }
-  return [...map.values()].sort((a,b)=>a.day.localeCompare(b.day)||a.operator.localeCompare(b.operator,'zh-CN')).map(o=>{
+  yield;
+  const sorted=[...map.values()].sort((a,b)=>a.day.localeCompare(b.day)||a.operator.localeCompare(b.operator,'zh-CN'));
+  const out=[];for(let i=0;i<sorted.length;i++){if(i&&i%2000===0)yield;out.push(finishObservation(sorted[i],dataset,dailyAreas));}
+  return out;
+}
+// One person-day observation; records are added with accumulateObservation and closed by finishObservation.
+// Shared by the record path above and the aggregate path (ledger.mjs), so the attendance rules exist once.
+function newObservation(day,r,confirmed){
+  return {day,operator:r.operator,operatorId:r.operator,identityKey:JSON.stringify([r.operator,confirmed?null:r.area]),area:r.area,areas:new Set(),sources:[],firstAccept:null,lastFinish:null,spanSeconds:null,acceptHours:Array(24).fill(0),finishHours:Array(24).fill(0),labels:[],issues:[],reasonCodes:[],recordCount:0,acceptEvents:[],finishEvents:[],validStarts:[],validEnds:[],validRecords:[],cross:false,timeInvalid:false,incomplete:false,identityAmbiguous:false};
+}
+function accumulateObservation(o,record,day){
+  const a=record.acceptStamp,b=record.finishStamp,ad=stampDay(a),bd=stampDay(b),valid=a!==null&&b!==null&&a<=b,cross=valid&&ad!==bd;
+  o.recordCount++;o.areas.add(record.area);o.sources.push(...record.sources);
+  if(a!==null&&ad===day){o.acceptEvents.push(a);o.acceptHours[utcHour(a)]++;}
+  if(b!==null&&bd===day){o.finishEvents.push(b);o.finishHours[utcHour(b)]++;}
+  if(valid&&!cross){o.validStarts.push(a);o.validEnds.push(b);o.validRecords.push(record);}
+  if(cross){o.cross=true;o.labels.push('跨日作业');o.issues.push('跨日期任务影响当天出勤判定');o.reasonCodes.push('cross_day');}
+  if(!valid){o.timeInvalid=true;o.issues.push(a===null?'接单时间缺失或不可识别':b===null?'完成时间缺失或不可识别':'接单时间晚于完成时间');o.reasonCodes.push('time_invalid');}
+  if(!record.raw.操作员.trim()){o.identityAmbiguous=true;o.issues.push('操作员缺失，无法确认身份');o.reasonCodes.push('identity_missing');}
+}
+function finishObservation(o,dataset,dailyAreas){
     const min=list=>list.length?list.reduce((a,b)=>Math.min(a,b)):null,max=list=>list.length?list.reduce((a,b)=>Math.max(a,b)):null;
     o.firstAccept=min(o.acceptEvents)===null?null:stampText(min(o.acceptEvents));o.lastFinish=max(o.finishEvents)===null?null:stampText(max(o.finishEvents));
     if(!o.cross&&min(o.validStarts)!==null&&max(o.validEnds)!==null)o.spanSeconds=(max(o.validEnds)-min(o.validStarts))/1000;
-    if(dailyAreas.get(JSON.stringify([o.day,o.operator])).size>1&&dataset.sameNameIsIdentity===false){o.identityAmbiguous=true;o.issues.push('跨区域同名人员身份未确认，保留各区域记录，不合并推定');o.reasonCodes.push('identity_ambiguous');}
+    if(dailyAreas.get(groupKey(o.day,o.operator)).size>1&&dataset.sameNameIsIdentity===false){o.identityAmbiguous=true;o.issues.push('跨区域同名人员身份未确认，保留各区域记录，不合并推定');o.reasonCodes.push('identity_ambiguous');}
     Object.assign(o,classifyAttendance(o));o.area=[...o.areas].sort().join('、');
     delete o.areas;delete o.acceptEvents;delete o.finishEvents;delete o.validStarts;delete o.validEnds;delete o.validRecords;return o;
-  });
 }
 
-return {ATTENDANCE_RULES,adjustedGap,overtimeMinutes,overtimeText,attendanceLabel,classifyAttendance,observeDays};
+return {ATTENDANCE_RULES,adjustedGap,overtimeMinutes,overtimeText,attendanceLabel,classifyAttendance,observeDays,prewarmObserveDays,newObservation,accumulateObservation,finishObservation};
 })();
 const __xlsx=(()=>{
 const xmlEscape=s=>String(s).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -672,7 +684,14 @@ function issueCategory(code){
   if(code==='composition_mismatch')return '作业构成不一致';
   return '其他数据质量问题';
 }
+const qualityCache=new WeakMap();
 function qualityIssues(dataset,filters){
+  const key=JSON.stringify([filters.start,filters.end,filters.area||null,filters.operator||null]);let cache=qualityCache.get(dataset);
+  if(!cache){cache=new Map();qualityCache.set(dataset,cache);}
+  if(!cache.has(key))cache.set(key,computeQualityIssues(dataset,filters));
+  return cache.get(key);
+}
+function computeQualityIssues(dataset,filters){
   const byId=new Map(dataset.records.map(r=>[r.id,r]));
   const base=scopedIssues(dataset,filters).map(i=>{
     const r=byId.get(i.recordId),raw=r?.raw;
@@ -710,54 +729,6 @@ function qualityCounts(issues){
 }
 
 return {issueCategory,qualityIssues,qualityCounts};
-})();
-const __export=(()=>{
-const {parseStamp}=__data;
-const {selectRecords,summarize,classifyMissingDays,scopedIssues,dayStamp,areaFilters,personFilters,dailyAreaContributions,contributionText}=__stats;
-const {observeDays,attendanceLabel}=__attendance;
-const {qualityIssues}=__quality;
-const text=value=>({type:'text',value:value??''}),num=value=>({type:'number',value}),date=stamp=>({type:'date',value:stamp/86400000+25569});
-const tuple=(...values)=>values.map(v=>typeof v==='number'?num(v):text(v));
-const packages=r=>r.packages===null?text(''):num(r.packages);
-function makeExportSheets(dataset,filters,options){
-  if(!options.sections.length)throw new Error('请选择导出内容');
-  const records=selectRecords(dataset,filters),areaRecords=selectRecords(dataset,areaFilters(filters)),personRecords=selectRecords(dataset,personFilters(filters)),s=summarize(areaRecords,filters),ps=summarize(personRecords,filters),sheets=[];
-  const withWeight=options.includeWeight!==false,weightCell=v=>v===null?text(''):num(v);
-  sheets.push({name:'范围与口径',rows:[tuple('项目','内容'),tuple('查看日期',filters.start+'～'+filters.end),tuple('全部数据范围',dataset.range?dataset.range.start+'～'+dataset.range.end:'无'),tuple('区域',filters.area||'全部区域'),tuple('操作员',filters.operator||'全部操作员'),tuple('汇总方式',{day:'日',week:'周',month:'月'}[filters.grain]),tuple('日期口径','按CSV业务本地时间；完成单量归完成日期，包含起止当天'),tuple('单量口径','完全去重后，有效完成日期的每行作业计1单'),tuple('包裹口径','单箱增值至少计1；仅累计可统计的包裹数，异常统一见数据检查'),tuple('出勤口径','出勤及加班时间根据作业记录推定，仅供现场管理参考，实际考勤与工资核算以真实劳动时间及有效考勤记录为准。当天隔离记录不参与正式统计。')]});
-  if(options.sections.includes('summary')){
-    sheets.push({name:'统计汇总',rows:[tuple('指标','值'),tuple('完成单量',s.orders),tuple('关联包裹数',s.packagesKnown),...(withWeight?[[text('处理重量（kg）'),weightCell(s.weightKg)]]:[]),tuple('有记录日数',s.recordDays)]});
-    const table=(name,list,types)=>({name,rows:[tuple('名称','所属区域','完成单量','关联包裹数',...(withWeight?['处理重量（kg）']:[]),'有记录日数',...types.map(t=>t.name+'单量')),...list.map(r=>[...tuple(r.name,r.areas.join('、'),r.orders,r.packagesKnown),...(withWeight?[weightCell(r.weightKg)]:[]),...tuple(r.recordDays,...types.map(t=>r.types[t.name]||0))])]});
-    sheets.push(table('区域统计',s.byArea,s.byType),table('操作员统计',ps.byOperator,ps.byType));
-    const observations=observeDays(dataset,personFilters(filters)).filter(o=>!o.incomplete),daily=[];
-    for(const person of ps.byOperator){
-      const items=personRecords.filter(r=>r.operator===person.name),contributions=dailyAreaContributions(items),summary=summarize(items,{...filters,grain:'day'});
-      for(const b of summary.buckets.filter(b=>b.orders)){
-        const obs=observations.filter(o=>o.operator===person.name&&o.day===b.start);
-        daily.push([date(dayStamp(b.start)),...tuple(person.name,contributionText(contributions.get(b.start)),b.orders,b.packagesKnown),...(withWeight?[weightCell(b.weightKg)]:[]),...tuple(b.types['单箱增值']||0,b.types['合箱增值']||0,obs.map(o=>o.firstAccept||'未知').join('；'),obs.map(o=>o.lastFinish||'未知').join('；'),obs.map(attendanceLabel).join('；'))]);
-      }
-    }
-    sheets.push({name:'个人每日明细',rows:[tuple('日期','操作员','区域完成单量构成','完成单量','关联包裹数',...(withWeight?['处理重量（kg）']:[]),'单箱增值','合箱增值','最早接单','最后完成','推定出勤情况'),...daily]});
-    sheets.push({name:'日期趋势',rows:[tuple('开始日期','结束日期','时段说明','完成单量','关联包裹数',...(withWeight?['处理重量（kg）']:[])),...s.buckets.map(b=>[date(dayStamp(b.start)),date(dayStamp(b.end)),...tuple(b.partial?'部分时段':'',b.orders,b.packagesKnown),...(withWeight?[weightCell(b.weightKg)]:[])])]});
-  }
-  if(options.sections.includes('detail')){
-    if(!options.detailFields.length)throw new Error('请选择至少一个作业明细字段');
-    sheets.push({name:'作业明细',rows:[tuple(...options.detailFields,'统计关联包裹数','来源文件与位置'),...records.map(r=>[...options.detailFields.map(k=>{if(k==='处理重量（kg）')return weightCell(r.weightGrams===null?null:r.weightGrams/1000);const value=r.raw[k]??'';const t=k.endsWith('时间')?parseStamp(value):null;return t===null?text(value):date(t);}),packages(r),text(r.sources.map(x=>`${x.fileName} 第${x.startLine}行`).join('；'))])]});
-  }
-  if(options.sections.includes('attendance')){
-    const obs=observeDays(dataset,filters).filter(o=>!o.incomplete);
-    sheets.push({name:'出勤辅助',rows:[tuple('日期','操作员','区域','首次接单记录','最后完成记录','作业记录跨度（秒）','出勤状态'),...obs.map(o=>[date(dayStamp(o.day)),text(o.operator),text(o.area),o.firstAccept?date(parseStamp(o.firstAccept)):text('未知'),o.lastFinish?date(parseStamp(o.lastFinish)):text('未知'),o.spanSeconds===null?text('未知'):num(o.spanSeconds),text(attendanceLabel(o))])]});
-    sheets.push({name:'小时分布',rows:[tuple('日期','操作员','区域','小时','接单记录数','完成记录数'),...obs.flatMap(o=>o.acceptHours.map((n,h)=>[date(dayStamp(o.day)),...tuple(o.operator,o.area,h,n,o.finishHours[h])]))]});
-  }
-  if(options.sections.includes('issues')){
-    sheets.push({name:'数据检查',rows:[tuple('分类','类型','任务编号','任务类型','说明','日期归属','区域','操作员','原始关联包裹数','原始值','统计值','来源'),...qualityIssues(dataset,filters).map(i=>tuple(i.category,i.code,i.task,i.type,i.message,i.finishDay||'当前范围 / 未归属日期（全局待核实）',i.area||'',i.operator||'',i.rawPackage||'空',i.rawValue??'',i.effectiveValue??'',i.sources.map(x=>`${x.fileName} 第${x.startLine}行`).join('；')))]});
-    const globalMissing=classifyMissingDays(dataset.records,filters.start,filters.end),localMissing=classifyMissingDays(areaRecords,filters.start,filters.end);
-    sheets.push({name:'无记录日期',rows:[tuple('检查范围','日期','星期','说明'),...[['全部导入数据',globalMissing],['当前筛选',localMissing]].flatMap(([scope,list])=>list.map(d=>[text(scope),date(dayStamp(d.day)),text('日一二三四五六'[d.weekday]),text(d.kind==='weekend'?'周末无作业记录':'工作日未发现作业记录，请核实')]))]});
-  }
-  sheets[0].rows.push(tuple('区域分析范围','当前日期与区域；不受操作员筛选影响'),tuple('人员分析范围','当前日期与操作员；全部已导入区域，完整姓名相同为同一人员，数字后缀保留'),tuple('原始作业明细范围','当前日期、区域与操作员共同筛选；原始区域保留'),tuple('个人每日明细口径','有效完成日期有记录日，每人每日一行，跨区域合计；出勤来自统一人员日期结果'),tuple('数据检查范围','原始提示按日期、区域与操作员追溯；人员出勤提示按日期与操作员跨区域汇总'));
-  return sheets;
-}
-
-return {makeExportSheets};
 })();
 const __interactions=(()=>{
 const {dayStamp,DAY_MS}=__stats;
@@ -866,7 +837,8 @@ function buildRegionTrend(records,filters,areas){
   const selected=filters.area?[filters.area]:areas;
   const names=[...new Set(selected)].sort((a,b)=>a.localeCompare(b,'zh-CN'));
   const total=summarize(records,filters);
-  const series=names.map(area=>({area,buckets:summarize(records.filter(r=>r.area===area),filters).buckets}));
+  // When every record already belongs to the area, the cached total summary is reused.
+  const series=names.map(area=>({area,buckets:summarize(records.every(r=>r.area===area)?records:records.filter(r=>r.area===area),filters).buckets}));
   return {areas:names,buckets:total.buckets.map((b,i)=>({key:b.key,start:b.start,end:b.end,partial:b.partial,total:b.orders,values:Object.fromEntries(series.map(s=>[s.area,s.buckets[i].orders]))}))};
 }
 function regionColor(area){
@@ -907,84 +879,697 @@ function groupedRegionChart(model,hidden=new Set(),containerWidth=1100){
 
 return {buildRegionTrend,regionColor,regionLabel,regionTooltip,groupedRegionChart};
 })();
-const __rawArchive=(()=>{
-const {parseStamp,stampDay}=__data;
-// Identical to formal raw-record identity; archive never uses corrected metrics.
-const rawRecordKey=raw=>JSON.stringify(Object.keys(raw).sort().map(k=>[k,raw[k]]));
-function archiveStructure(files){
-  const headers=files[0]?.archiveHeaders||files[0]?.headers||[],set=new Set(headers),conflicts=[];
-  for(const f of files){
-    const actual=f.archiveHeaders||f.headers;
-    const missing=headers.filter(h=>!actual.includes(h)),added=actual.filter(h=>!set.has(h));
-    if(missing.length||added.length)conflicts.push({fileName:f.fileName,missing,added,reason:'字段结构不同，不能无损合并；字段名称变化分别列为缺失与新增'});
-    for(const e of f.errors||[])conflicts.push({fileName:f.fileName,line:e.sources?.[0]?.startLine,missing:[],added:[],reason:e.message+'；此行未能完整解析，归档已停止'});
-  }
-  return {headers:[...headers],conflicts};
-}
-async function prepareRawArchive(files,{isolatedKeys=new Set(),yieldControl=async()=>{},onProgress=()=>{}}={}){
-  const {headers,conflicts}=archiveStructure(files),rawCount=files.reduce((n,f)=>n+f.rows.length+(f.errors?.length||0),0);
-  const out={fileCount:files.length,rawCount,headers,conflicts,blocked:!files.length||conflicts.length>0,entries:[],duplicates:new Map(),duplicateCount:0,withinFileDuplicates:0,crossFileDuplicates:0,invalidFinishCount:0,isolatedCount:0,taskConflictCount:0,range:null};
-  if(out.blocked)return out;
-  const seen=new Map(),tasks=new Map();let processed=0;
-  for(const file of files){const fileSeen=new Set();for(const row of file.rows){
-    const key=rawRecordKey(row.raw);
-    if(seen.has(key)){
-      const index=seen.get(key),first=out.entries[index];out.duplicateCount++;
-      if(fileSeen.has(index))out.withinFileDuplicates++;else out.crossFileDuplicates++;
-      fileSeen.add(index);
-      if(!out.duplicates.has(index))out.duplicates.set(index,[first.row.source]);
-      out.duplicates.get(index).push(row.source);
-    }else{
-      for(const h of file.headers)if(typeof row.raw[h]!=='string')throw new Error(file.fileName+' 存在未保留的原始字段值，已停止归档');
-      fileSeen.add(out.entries.length);seen.set(key,out.entries.length);out.entries.push({row,file});
-      const day=stampDay(parseStamp(row.raw.完成时间));
-      if(day){if(!out.range)out.range={start:day,end:day};else{if(day<out.range.start)out.range.start=day;if(day>out.range.end)out.range.end=day;}}
-      else out.invalidFinishCount++;
-      if(isolatedKeys.has(key))out.isolatedCount++;
-      const task=row.raw.任务编号;if(task.trim())tasks.set(task,(tasks.get(task)||0)+1);
+const __stream=(()=>{
+// Streaming CSV import: reads a file in chunks, decodes incrementally and parses row by row.
+// Grammar, line numbers and error messages match parseCsv in csv.mjs exactly. Callers receive each
+// row's values and decide what to keep; nothing is retained here after a row is handed over.
+const {CORE_HEADERS,csvHeaderLine,csvRowLine}=__csv;
+const {contentKey}=__hash;
+
+const ERROR_LIST_LIMIT=1000;
+const CHUNK_BYTES=1<<20;
+
+// Incremental tokenizer. push(text) may split anywhere, including inside "" escapes or CRLF.
+function createTokenizer(onRow){
+  let values=[],field='',quoted=false,closed=false,line=1,startLine=1,pendingQuote=false,pendingCR=false,bomLeft=2,started=false;
+  const pushField=()=>{values.push(field);field='';closed=false;};
+  const pushRow=()=>{pushField();onRow(values,startLine);values=[];startLine=line+1;};
+  return {
+    push(text){
+      if(!text)return;
+      let i=0;
+      if(!started){while(bomLeft&&text[i]==='﻿'){i++;bomLeft--;}if(i<text.length)started=true;else return;}
+      if(pendingCR){pendingCR=false;if(text[i]==='\n')i++;}
+      if(pendingQuote){pendingQuote=false;if(text[i]==='"'){field+='"';i++;}else{quoted=false;closed=true;}}
+      for(;i<text.length;i++){
+        const ch=text[i];
+        if(quoted){
+          if(ch==='"'){
+            if(i+1>=text.length){pendingQuote=true;}
+            else if(text[i+1]==='"'){field+='"';i++;}
+            else{quoted=false;closed=true;}
+          }else{field+=ch;if(ch==='\n')line++;}
+        }else if(ch==='"'){
+          if(field!==''||closed)throw new Error(`第${line}行引号位置错误`);
+          quoted=true;
+        }else if(ch===','){pushField();}
+        else if(ch==='\n'||ch==='\r'){
+          if(ch==='\r'){if(i+1>=text.length)pendingCR=true;else if(text[i+1]==='\n')i++;}
+          pushRow();line++;
+        }else{
+          if(closed)throw new Error(`第${line}行引号后有多余内容`);
+          field+=ch;
+        }
+      }
+    },
+    end(){
+      if(pendingQuote){pendingQuote=false;quoted=false;closed=true;}
+      if(quoted)throw new Error(`第${startLine}行引号未闭合`);
+      if(field!==''||values.length||closed){pushField();onRow(values,startLine);values=[];}
     }
-    if(++processed%2000===0){onProgress(processed,rawCount);await yieldControl();}
-  }
-  }
-  out.taskConflictCount=[...tasks.values()].filter(n=>n>1).length;
-  out.filename=out.range?`原始数据合并_${out.range.start}_${out.range.end}.csv`:'原始数据合并_日期未知.csv';
-  onProgress(rawCount,rawCount);return out;
-}
-async function rawArchiveParts(archive,{yieldControl=async()=>{},onProgress=()=>{}}={}){
-  if(archive.blocked)throw new Error('存在结构冲突，不能导出原始CSV');
-  const encoder=new TextEncoder(),quote=s=>'"'+s.replace(/"/g,'""')+'"';
-  const parts=[new Uint8Array([239,187,191])];let chunk=archive.headers.map(quote).join(',')+'\r\n';
-  for(let i=0;i<archive.entries.length;i++){
-    const {row}=archive.entries[i];chunk+=archive.headers.map(h=>quote(row.raw[h.trim()])).join(',')+'\r\n';
-    if(chunk.length>=65536){parts.push(encoder.encode(chunk));chunk='';}
-    if((i+1)%2000===0){onProgress(i+1,archive.entries.length);await yieldControl();}
-  }
-  if(chunk)parts.push(encoder.encode(chunk));onProgress(archive.entries.length,archive.entries.length);return parts;
+  };
 }
 
-return {rawRecordKey,archiveStructure,prepareRawArchive,rawArchiveParts};
+// Byte chunks of a File/Blob (stream or slice) or of a test object exposing arrayBuffer().
+async function* readChunks(file){
+  if(typeof file.stream==='function'){const reader=file.stream().getReader();for(;;){const {done,value}=await reader.read();if(done)return;yield value;}}
+  if(typeof file.slice==='function'&&typeof file.size==='number'){for(let p=0;p<file.size;p+=CHUNK_BYTES)yield new Uint8Array(await file.slice(p,p+CHUNK_BYTES).arrayBuffer());return;}
+  const all=new Uint8Array(await file.arrayBuffer());for(let p=0;p<all.length;p+=CHUNK_BYTES)yield all.subarray(p,p+CHUNK_BYTES);
+}
+
+// Parses one file. Calls onHeader(headers,archiveHeaders) once, onRecord(values,source) per valid row.
+// Returns {encoding,errors,errorCount,rowCount}. Throws the same file-level errors as decodeCsv/parseCsv.
+// Like decodeCsv: UTF-8 first, then GB18030; a UTF-8 failure anywhere restarts the file as GB18030.
+async function parseStream(file,{fileId,fileName,onHeader=()=>{},onRecord,onBytes=()=>{},onRestart=()=>{}}){
+  let lastError=null;
+  for(const encoding of ['utf-8','gb18030']){
+    // Like parseCsv, structural (quote) errors anywhere in the file take precedence over header errors,
+    // so a header problem is remembered while the rest of the file is still tokenized.
+    let headers=null,recordIndex=0,rowCount=0,errorCount=0,parseError=null,headerError=null;const errors=[];
+    const tokenizer=createTokenizer((values,startLine)=>{
+      if(headerError||!values.some(v=>v!==''))return;
+      if(!headers){
+        const archiveHeaders=values.slice();headers=archiveHeaders.map(h=>h.trim());
+        try{
+          if(headers.some(h=>!h)||new Set(headers).size!==headers.length)throw new Error('表头为空或有重复列名');
+          const missing=CORE_HEADERS.filter(h=>!headers.includes(h));
+          if(missing.length)throw new Error('缺少必需字段：'+missing.join('、'));
+          onHeader(headers,archiveHeaders);
+        }catch(e){headerError=e;}
+        return;
+      }
+      const source={fileId,fileName,recordIndex:++recordIndex,startLine};
+      if(values.length!==headers.length){errorCount++;if(errors.length<ERROR_LIST_LIMIT)errors.push({code:'row_width',message:`列数错误：需要${headers.length}列，实际${values.length}列`,sources:[source],recordId:null,finishDay:null,area:null,operator:null});return;}
+      rowCount++;onRecord(values,source,headers);
+    });
+    const decoder=new TextDecoder(encoding,{fatal:true});let failedDecode=false;
+    // Only decoder failures switch encoding; read errors propagate unchanged.
+    const decode=(chunk,stream)=>{try{return stream?decoder.decode(chunk,{stream:true}):decoder.decode();}catch(e){failedDecode=true;lastError=e;return null;}};
+    for await(const chunk of readChunks(file)){
+      const text=decode(chunk,true);if(failedDecode)break;
+      if(!parseError)try{tokenizer.push(text);}catch(e){parseError=e;}
+      onBytes(chunk.length);
+    }
+    if(!failedDecode){const tail=decode(null,false);if(!failedDecode&&!parseError)try{tokenizer.push(tail);tokenizer.end();}catch(e){parseError=e;}}
+    if(failedDecode){if(encoding==='gb18030')throw new Error('无法识别文件编码，请导出为 UTF-8 CSV');onRestart();continue;}
+    if(parseError)throw parseError;
+    if(!headers)throw new Error('文件为空');
+    if(headerError)throw headerError;
+    return {encoding,errors,errorCount,rowCount};
+  }
+  throw lastError;
+}
+
+// Per-file column plan: which columns to keep, and the sorted order used by recordKey(raw).
+function columnPlan(headers){
+  const sorted=headers.map((h,j)=>[h,j]).sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0);
+  return {
+    // Same text as recordKey(row object) without building and sorting an object per row.
+    key:values=>JSON.stringify(sorted.map(([h,j])=>[h,values[j]]))
+  };
+}
+
+// Values of non-statistics columns for chosen rows (Excel detail export), keyed "fileId:recordIndex".
+async function collectFields(files,{fields,picks,onBytes}){
+  const out={};
+  for(const {file,fileId,fileName} of files){
+    const want=new Set(picks[fileId]||[]);if(!want.size)continue;let headers=null;
+    await parseStream(file,{fileId,fileName,onBytes,onHeader:h=>{headers=h;},onRestart:()=>{for(const k of Object.keys(out))if(k.startsWith(fileId+':'))delete out[k];},
+      onRecord:(values,source)=>{if(!want.has(source.recordIndex))return;const v={};for(const f of fields){const j=headers.indexOf(f);if(j>=0)v[f]=values[j];}out[fileId+':'+source.recordIndex]=v;}});
+  }
+  return out;
+}
+
+// Merged CSV of kept rows: picks[fileId] = {lines: sorted Uint32Array of recordIndex, hashHi, hashLo}.
+// Output order is file order, then row order. A changed file is reported instead of exported.
+async function exportCsv(files,{headers,picks,onBytes}){
+  const encoder=new TextEncoder(),parts=[new Uint8Array([239,187,191]),encoder.encode(csvHeaderLine(headers))];
+  for(const {file,fileId,fileName} of files){
+    const want=picks[fileId];if(!want||!want.lines.length)continue;let next=0,plan=null,local=[],chunk='';
+    await parseStream(file,{fileId,fileName,onBytes,onRestart:()=>{next=0;local=[];chunk='';},onHeader:h=>{plan=columnPlan(h);},
+      onRecord:(values,source,fileHeaders)=>{
+        if(next>=want.lines.length||source.recordIndex!==want.lines[next])return;
+        const hex=contentKey(plan.key(values));
+        if(parseInt(hex.slice(0,8),16)!==want.hashHi[next]||parseInt(hex.slice(8,16),16)!==want.hashLo[next])throw new Error(fileName+' 内容已变化，请重新导入后再导出');
+        next++;const raw={};for(let j=0;j<fileHeaders.length;j++)raw[fileHeaders[j]]=values[j];
+        chunk+=csvRowLine(headers,raw);if(chunk.length>=65536){local.push(encoder.encode(chunk));chunk='';}
+      }});
+    if(next!==want.lines.length)throw new Error(fileName+' 内容已变化，请重新导入后再导出');
+    parts.push(...local);if(chunk)parts.push(encoder.encode(chunk));
+  }
+  return parts;
+}
+
+return {ERROR_LIST_LIMIT,CHUNK_BYTES,createTokenizer,readChunks,parseStream,columnPlan,collectFields,exportCsv};
 })();
+const __compact=(()=>{
+// Compact import (runs in the background worker): each file is streamed once and reduced to
+// fixed-size numeric columns (about 60 bytes per kept row). Long text columns are never kept.
+// Rows completed today (Japan time) or later are excluded; rows with an unreadable completion
+// time or a wrong column count are skipped and counted.
+const {parseStream,columnPlan,ERROR_LIST_LIMIT}=__stream;
+const {assessRow,stampText,ROW_ISSUES}=__rules;
+const {contentKey}=__hash;
+const {WEIGHT_FIELD}=__weight;
+
+const FLAG={opBlank:1<<13,weightMissing:1<<14};
+const ISSUE_BIT=Object.fromEntries(ROW_ISSUES.map((c,i)=>[c,1<<i]));
+const NO_PACKAGES=-1;
+
+class Col{
+  constructor(T,n=4096){this.T=T;this.a=new T(n);this.n=0;}
+  push(v){if(this.n===this.a.length){const b=new this.T(this.a.length*2);b.set(this.a);this.a=b;}this.a[this.n++]=v;}
+  done(){return this.a.slice(0,this.n);}
+}
+const CANONICAL_TASK=/^(?:0|[1-9]\d{0,14})$/;
+
+async function compactFile(file,{fileId,fileName,today,checkHeaders=()=>{},onBytes=()=>{}}){
+  let plan=null,headers=null,archiveHeaders=null,hasWeight=false;
+  const fresh=()=>({task:new Col(Float64Array),finish:new Col(Float64Array),accept:new Col(Float64Array),area:new Col(Uint16Array),op:new Col(Uint16Array),type:new Col(Uint16Array),
+    packages:new Col(Int32Array),weight:new Col(Float64Array),flags:new Col(Uint32Array),line:new Col(Uint32Array),recordIndex:new Col(Uint32Array),hashHi:new Col(Uint32Array),hashLo:new Col(Uint32Array)});
+  let c,dicts,extra,skippedFinish,todayCount,readRows;
+  const reset=()=>{c=fresh();dicts={area:new Map(),op:new Map(),type:new Map()};extra=new Map();skippedFinish={count:0,samples:[]};todayCount=0;readRows=0;};
+  reset();
+  const idOf=(map,v)=>{let i=map.get(v);if(i===undefined){i=map.size;if(i>65535)throw new Error('区域、人员或任务类型种类过多');map.set(v,i);}return i;};
+  const result=await parseStream(file,{fileId,fileName,onBytes,onRestart:reset,
+    onHeader:(h,a)=>{checkHeaders(h);headers=h;archiveHeaders=a;plan=columnPlan(h);hasWeight=h.includes(WEIGHT_FIELD);},
+    onRecord:(values,source)=>{
+      readRows++;
+      const raw={};for(let j=0;j<headers.length;j++)raw[headers[j]]=values[j];
+      const v=assessRow(raw);
+      if(v.finishDay===null){skippedFinish.count++;if(skippedFinish.samples.length<ERROR_LIST_LIMIT)skippedFinish.samples.push({source,rawValue:raw.完成时间});return;}
+      if(v.finishDay>=today){todayCount++;return;}
+      const i=c.finish.n,taskText=raw.任务编号,trimmed=taskText.trim(),hex=contentKey(plan.key(values));
+      const x={};
+      if(CANONICAL_TASK.test(taskText))c.task.push(Number(taskText));else{c.task.push(NaN);x.t=taskText;if(!trimmed)x.k='\u0000'+hex;else if(CANONICAL_TASK.test(trimmed))x.n=Number(trimmed);}
+      c.finish.push(v.finishStamp);c.accept.push(v.acceptStamp===null?NaN:v.acceptStamp);
+      c.area.push(idOf(dicts.area,v.area));c.op.push(idOf(dicts.op,v.operator));c.type.push(idOf(dicts.type,v.type));
+      c.packages.push(v.packages===null?NO_PACKAGES:v.packages);c.weight.push(v.weightGrams===null?NaN:v.weightGrams);
+      let flags=0;for(const [code] of v.issues)flags|=ISSUE_BIT[code];
+      if(v.operatorBlank)flags|=FLAG.opBlank;if(v.weightReason==='操作后的包裹重量缺失')flags|=FLAG.weightMissing;
+      c.flags.push(flags);c.line.push(source.startLine);c.recordIndex.push(source.recordIndex);
+      c.hashHi.push(parseInt(hex.slice(0,8),16));c.hashLo.push(parseInt(hex.slice(8,16),16));
+      // Original text is kept only where it cannot be rebuilt from the numbers above.
+      if(raw.完成时间!==stampText(v.finishStamp))x.f=raw.完成时间;
+      if(raw.接单时间!==(v.acceptStamp===null?'':stampText(v.acceptStamp)))x.a=raw.接单时间;
+      if(raw.关联包裹数!==(v.packages===null?'':String(v.packages)))x.p=raw.关联包裹数;
+      if(hasWeight&&raw[WEIGHT_FIELD]!==(v.weightGrams===null?'':String(v.weightGrams)))x.w=raw[WEIGHT_FIELD];
+      if(flags&ISSUE_BIT.duration_mismatch)x.d=raw.任务耗时.trim();
+      if(v.operatorBlank&&raw.操作员!=='')x.o=raw.操作员;if(!raw.所属区域.trim()&&raw.所属区域!=='')x.ar=raw.所属区域;if(!raw.任务小类.trim()&&raw.任务小类!=='')x.ty=raw.任务小类;
+      for(const k in x){extra.set(i,x);break;}
+    }});
+  const dict=m=>[...m.keys()];
+  const cols=Object.fromEntries(Object.entries(c).map(([k,col])=>[k,col.done()]));
+  return {fileId,fileName,headers,archiveHeaders,hasWeight,encoding:result.encoding,rowCount:cols.finish.length,readRows,
+    errors:result.errors,errorCount:result.errorCount,skippedFinish,todayCount,
+    dicts:{area:dict(dicts.area),op:dict(dicts.op),type:dict(dicts.type)},cols,extra:[...extra]};
+}
+
+return {FLAG,ISSUE_BIT,NO_PACKAGES,compactFile};
+})();
+const __engine=(()=>{
+// Import engine: runs the file work (compact parsing, CSV export, extra detail columns) in a
+// Web Worker when available, otherwise on the page itself. Both paths run the same code.
+const {exportCsv,collectFields}=__stream;
+const {compactFile}=__compact;
+const {headerDifference}=__csv;
+
+function mismatchMessage(base,headers){
+  if(!base)return null;const {missing,added}=headerDifference(base,headers);
+  return missing.length||added.length?'列名与已导入数据不同，已拒绝导入'+(missing.length?'；缺少列：'+missing.join('、'):'')+(added.length?'；多出列：'+added.join('、'):''):null;
+}
+const buffersOf=compact=>Object.values(compact.cols).map(a=>a.buffer);
+
+// Work shared by both paths; `post` delivers results and progress.
+const operations={
+  // Each file → compact columns. A file whose columns differ from the first accepted file is rejected.
+  async compact({files,baseHeaders,today},post){
+    let base=baseHeaders||null;
+    for(const f of files){
+      try{
+        const out=await compactFile(f.file,{fileId:f.fileId,fileName:f.fileName,today,onBytes:n=>post({type:'bytes',n}),
+          checkHeaders:h=>{const message=mismatchMessage(base,h);if(message)throw new Error(message);}});
+        if(!base)base=out.headers;post({type:'file',compact:out},buffersOf(out));
+      }catch(e){post({type:'fileError',fileId:f.fileId,message:e.message});}
+    }
+  },
+  async exportCsv({files,headers,picks},post){const parts=await exportCsv(files,{headers,picks,onBytes:n=>post({type:'bytes',n})});post({type:'parts',parts},parts.map(p=>p.buffer));},
+  async fields({files,fields,picks},post){post({type:'fields',values:await collectFields(files,{fields,picks,onBytes:n=>post({type:'bytes',n})})});}
+};
+
+function createEngine({workerSource=null,createWorker}={}){
+  let worker=null,seq=0;const pending=new Map();
+  const ready=workerSource&&typeof Worker!=='undefined'&&typeof Blob!=='undefined'&&typeof URL!=='undefined'?new Promise(resolve=>{
+    try{
+      worker=(createWorker||(u=>new Worker(u)))(URL.createObjectURL(new Blob([workerSource],{type:'text/javascript'})));
+      const timer=setTimeout(()=>{worker=null;resolve(false);},3000);
+      worker.onmessage=e=>{const m=e.data;if(m.type==='pong'){clearTimeout(timer);resolve(true);return;}const p=pending.get(m.id);if(!p)return;
+        if(m.type==='done'){pending.delete(m.id);p.resolve();}else if(m.type==='error'){pending.delete(m.id);p.reject(new Error(m.message));}else p.onMessage(m);};
+      worker.onerror=()=>{clearTimeout(timer);worker=null;resolve(false);for(const p of pending.values())p.reject(new Error('后台读取线程出错，请刷新页面后重试'));pending.clear();};
+      worker.postMessage({op:'ping'});
+    }catch{worker=null;resolve(false);}
+  }):Promise.resolve(false);
+  async function run(op,args,onMessage){
+    if(await ready&&worker)return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject,onMessage});worker.postMessage({id,op,args});});
+    await operations[op](args,m=>onMessage(m));
+  }
+  const sizeOf=list=>list.reduce((n,f)=>n+(f.file?.size||0),0);
+  return {
+    get mode(){return worker?'worker':'page';},
+    ready,
+    // jobs: [{file,fileId,fileName}] → [{fileId, compact} | {fileId, error}] in input order.
+    async compactFiles(jobs,{baseHeaders,today,onProgress=()=>{}}={}){
+      const total=sizeOf(jobs),results=new Map();let bytes=0,doneFiles=0;
+      await run('compact',{files:jobs.map(j=>({file:j.file,fileId:j.fileId,fileName:j.fileName})),baseHeaders,today},m=>{
+        if(m.type==='bytes'){bytes+=m.n;onProgress({bytes,total,doneFiles,files:jobs.length});}
+        else if(m.type==='file'){doneFiles++;results.set(m.compact.fileId,{fileId:m.compact.fileId,compact:m.compact});onProgress({bytes,total,doneFiles,files:jobs.length});}
+        else if(m.type==='fileError'){doneFiles++;results.set(m.fileId,{fileId:m.fileId,error:m.message});}
+      });
+      return jobs.map(j=>results.get(j.fileId)||{fileId:j.fileId,error:'文件读取失败'});
+    },
+    async exportCsv(files,headers,picks,{onProgress=()=>{}}={}){
+      let parts=null,bytes=0;const list=files.filter(f=>picks[f.fileId]).map(f=>({file:f.blob,fileId:f.fileId,fileName:f.fileName})),total=sizeOf(list);
+      await run('exportCsv',{files:list,headers,picks},m=>{if(m.type==='bytes'){bytes+=m.n;onProgress({bytes,total});}else if(m.type==='parts')parts=m.parts;});
+      return parts;
+    },
+    // picks: {fileId: [recordIndex,…]} → lookup(fileId, recordIndex, field).
+    async fields(files,fields,picks,{onProgress=()=>{}}={}){
+      let values={},bytes=0;const list=files.filter(f=>picks[f.fileId]).map(f=>({file:f.blob,fileId:f.fileId,fileName:f.fileName})),total=sizeOf(list);
+      await run('fields',{files:list,fields,picks},m=>{if(m.type==='bytes'){bytes+=m.n;onProgress({bytes,total});}else if(m.type==='fields')values=m.values;});
+      return (fileId,recordIndex,k)=>values[fileId+':'+recordIndex]?.[k];
+    }
+  };
+}
+
+return {mismatchMessage,operations,createEngine};
+})();
+const __ledger=(()=>{
+// Page-side ledger: merges compact files (compact.mjs), keeps one row per task number,
+// and builds the summary table (day + area + operator + task type) that every statistic reads.
+// Original rows are never held in memory; a row is rebuilt from its compact columns only when displayed.
+const {stampDay,stampText,previousDay,ROW_ISSUES}=__rules;
+const {ISSUE_BIT,FLAG,NO_PACKAGES}=__compact;
+const {newObservation,accumulateObservation,finishObservation}=__attendance;
+
+const ISSUE_LIST_LIMIT=1000;
+const SLICE=50000,DAY_MS=86400000;
+
+class Grow{
+  constructor(T,n=1024){this.T=T;this.a=new T(n);this.n=0;}
+  push(v){if(this.n===this.a.length){const b=new this.T(this.a.length*2);b.set(this.a);this.a=b;}this.a[this.n++]=v;return this.n-1;}
+  get view(){return this.a.subarray(0,this.n);}
+}
+// Open-addressing table for numeric task numbers (far smaller than a Map with millions of entries).
+class NumberIndex{
+  constructor(){this.cap=1<<16;this.keys=new Float64Array(this.cap);this.vals=new Int32Array(this.cap).fill(-1);this.size=0;}
+  slot(v){const hi=Math.floor(v/4294967296),lo=v>>>0;return (Math.imul(lo^Math.imul(hi,0x9e3779b1),0x85ebca6b)^(lo>>>15))&(this.cap-1);}
+  get(v){for(let i=this.slot(v);;i=(i+1)&(this.cap-1)){const x=this.vals[i];if(x<0)return -1;if(this.keys[i]===v)return x;}}
+  set(v,val){
+    if(this.size*2>=this.cap)this.grow();
+    for(let i=this.slot(v);;i=(i+1)&(this.cap-1)){if(this.vals[i]<0){this.keys[i]=v;this.vals[i]=val;this.size++;return;}if(this.keys[i]===v){this.vals[i]=val;return;}}
+  }
+  grow(){const k=this.keys,v=this.vals;this.cap*=2;this.keys=new Float64Array(this.cap);this.vals=new Int32Array(this.cap).fill(-1);this.size=0;for(let i=0;i<k.length;i++)if(v[i]>=0)this.set(k[i],v[i]);}
+}
+
+function runSync(steps){for(;;){const s=steps.next();if(s.done)return s.value;}}
+async function runSliced(steps,{onProgress=()=>{},yieldControl=()=>new Promise(r=>setTimeout(r,0))}={}){
+  for(;;){const s=steps.next();if(s.done)return s.value;onProgress(s.value);await yieldControl();}
+}
+
+class Ledger{
+  constructor(){this.files=[];this.seq=0;this.dicts={area:[],op:[],type:[]};this.dictMaps={area:new Map(),op:new Map(),type:new Map()};}
+  get rowCount(){return this.files.reduce((n,f)=>n+f.rowCount,0);}
+  global(kind,value){const m=this.dictMaps[kind];let i=m.get(value);if(i===undefined){i=this.dicts[kind].length;this.dicts[kind].push(value);m.set(value,i);}return i;}
+  // compact: result of compactFile; mtime: file modification time (newer wins for the same task number).
+  addFile(compact,{mtime=0,blob=null}={}){
+    const f={...compact,mtime,order:this.seq++,blob,extra:new Map(compact.extra)};
+    for(const kind of ['area','op','type'])f[kind+'Map']=Uint16Array.from(compact.dicts[kind],v=>this.global(kind,v));
+    this.files.push(f);return f;
+  }
+  removeFile(fileId){this.files=this.files.filter(f=>f.fileId!==fileId);}
+  clear(){this.files=[];this.dicts={area:[],op:[],type:[]};this.dictMaps={area:new Map(),op:new Map(),type:new Map()};}
+  // Builds the view (summary table, issues, attendance) from all files. Yields {phase,done,total} between slices.
+  *buildSteps({today}){
+    const files=this.files,total=files.reduce((n,f)=>n+f.rowCount,0);let done=0;
+    // 1. One row per task number. Newer file (modification time, then import order) wins; inside a file the later row wins.
+    const wFile=new Grow(Uint16Array,Math.max(1024,total)),wRow=new Grow(Uint32Array,Math.max(1024,total)),nums=new NumberIndex(),texts=new Map();
+    const dup={dropped:0,differing:0,events:[]};
+    const newer=(fa,ra,fb,rb)=>files[fa].mtime!==files[fb].mtime?files[fa].mtime>files[fb].mtime:files[fa].order!==files[fb].order?files[fa].order>files[fb].order:ra>rb;
+    for(let fi=0;fi<files.length;fi++){
+      const f=files[fi],task=f.cols.task;
+      for(let r=0;r<f.rowCount;r++){
+        if(++done%SLICE===0)yield {phase:'dedup',done,total};
+        let num=task[r],text=null;
+        if(Number.isNaN(num)){const x=f.extra.get(r);if(x.n!==undefined)num=x.n;else text=x.k??'T'+x.t.trim();}
+        const s=text===null?nums.get(num):texts.get(text)??-1;
+        if(s<0){const n=wFile.push(fi);wRow.push(r);if(text===null)nums.set(num,n);else texts.set(text,n);continue;}
+        const cf=wFile.a[s],cr=wRow.a[s],differs=files[cf].cols.hashHi[cr]!==f.cols.hashHi[r]||files[cf].cols.hashLo[cr]!==f.cols.hashLo[r];
+        dup.dropped++;if(differs)dup.differing++;
+        const wins=newer(fi,r,cf,cr);
+        if(dup.events.length<ISSUE_LIST_LIMIT)dup.events.push({slot:s,pos:wFile.n,file:wins?cf:fi,row:wins?cr:r,differs});
+        if(wins){wFile.a[s]=fi;wRow.a[s]=r;}
+      }
+    }
+    const count=wFile.n,WF=wFile.view,WR=wRow.view;
+    // 2. Summary table: day + area + operator + type (+ first row, used to keep the original listing order).
+    const cellIndex=new Map(),cell={day:new Grow(Int32Array),area:new Grow(Uint16Array),op:new Grow(Uint16Array),type:new Grow(Uint16Array),orders:new Grow(Float64Array),pkKnown:new Grow(Float64Array),pkUnknown:new Grow(Float64Array),wSum:new Grow(Float64Array),wComp:new Grow(Float64Array),wValid:new Grow(Float64Array),wUnknown:new Grow(Float64Array),firstSlot:new Grow(Int32Array)};
+    // Cell key = ((day*1024+area)*65536+operator)*1024+type stays an exact integer for every realistic date.
+    if(this.dicts.area.length>1024||this.dicts.op.length>65536||this.dicts.type.length>1024)throw new Error('区域、人员或任务类型种类过多，无法汇总');
+    const issueTotals={},otherTypes=new Map(),single=this.global('type','单箱增值'),merged=this.global('type','合箱增值');
+    let minDay=Infinity,maxDay=-Infinity,maxFinish=-Infinity;
+    // Per kept row: day index, area and operator, for fast detail-list filtering.
+    const slotDay=new Int32Array(count),slotArea=new Uint16Array(count),slotOp=new Uint16Array(count);
+    for(let s=0;s<count;s++){
+      if(s%SLICE===0&&s)yield {phase:'summary',done:s,total:count};
+      const f=files[WF[s]],r=WR[s],c=f.cols,d=Math.floor(c.finish[r]/DAY_MS),a=f.areaMap[c.area[r]],o=f.opMap[c.op[r]],t=f.typeMap[c.type[r]];
+      if(d<minDay)minDay=d;if(d>maxDay)maxDay=d;slotDay[s]=d;slotArea[s]=a;slotOp[s]=o;if(c.finish[r]>maxFinish)maxFinish=c.finish[r];
+      const key=((d*1024+a)*65536+o)*1024+t;let i=cellIndex.get(key);
+      if(i===undefined){i=cell.day.push(d);cell.area.push(a);cell.op.push(o);cell.type.push(t);for(const k of ['orders','pkKnown','pkUnknown','wSum','wComp','wValid','wUnknown'])cell[k].push(0);cell.firstSlot.push(s);cellIndex.set(key,i);}
+      cell.orders.a[i]++;const p=c.packages[r];if(p===NO_PACKAGES)cell.pkUnknown.a[i]++;else cell.pkKnown.a[i]+=p;
+      const w=c.weight[r];if(Number.isNaN(w))cell.wUnknown.a[i]++;else{const y=w-cell.wComp.a[i],next=cell.wSum.a[i]+y;cell.wComp.a[i]=(next-cell.wSum.a[i])-y;cell.wSum.a[i]=next;cell.wValid.a[i]++;}
+      const flags=c.flags[r];for(let b=0;b<ROW_ISSUES.length;b++)if(flags&(1<<b))issueTotals[ROW_ISSUES[b]]=(issueTotals[ROW_ISSUES[b]]||0)+1;
+      if(t!==single&&t!==merged){const k=o*1048576+d;const list=otherTypes.get(k)||[];list.push(s);otherTypes.set(k,list);}
+    }
+    const cells=Object.fromEntries(Object.entries(cell).map(([k,g])=>[k,g.view.slice()]));cells.length=cell.day.n;
+    // 3. Issue lists: skipped rows first, then each kept row's issues with duplicate notes in reading order.
+    const view=this.makeView({files,WF,WR,count,cells,minDay,maxDay,today,dup,issueTotals,otherTypes});view.slotDay=slotDay;view.slotArea=slotArea;view.slotOp=slotOp;view.maxFinishStamp=count?maxFinish:null;
+    yield {phase:'issues',done:0,total:count};
+    const issues=[],listed={},take=code=>(listed[code]=(listed[code]||0)+1)<=ISSUE_LIST_LIMIT;
+    for(const f of files)for(const e of f.errors)if(take('row_width'))issues.push(e);
+    for(const f of files)for(const sk of f.skippedFinish.samples)if(take('finish_invalid'))issues.push({code:'finish_invalid',message:'完成时间缺失或无法识别；已跳过，不计入统计',recordId:null,sources:[sk.source],finishDay:null,area:null,operator:null,rawValue:sk.rawValue,effectiveValue:null});
+    issueTotals.row_width=files.reduce((n,f)=>n+f.errorCount,0)||undefined;issueTotals.finish_invalid=files.reduce((n,f)=>n+f.skippedFinish.count,0)||undefined;
+    if(dup.dropped)issueTotals.duplicate=dup.dropped;
+    let ev=0;const events=dup.events.slice().sort((x,y)=>x.pos-y.pos);
+    const pushDup=e=>{if(!take('duplicate'))return;const r=view.record(e.slot);issues.push({code:'duplicate',message:e.differs?'同任务编号内容不同，统计只保留文件修改时间较新的一条':'完全相同的作业记录，统计只计一次',recordId:r.id,sources:[view.sourceOf(e.file,e.row)],finishDay:r.finishDay,area:r.area,operator:r.operator,rawValue:null,effectiveValue:null});};
+    for(let s=0;s<count;s++){
+      if(s%SLICE===0&&s)yield {phase:'issues',done:s,total:count};
+      while(ev<events.length&&events[ev].pos<=s){pushDup(events[ev]);ev++;}
+      const f=files[WF[s]],r=WR[s],flags=f.cols.flags[r];if(!(flags&0x1fff))continue;
+      for(const i of view.rowIssues(s))if(take(i.code))issues.push(i);
+    }
+    while(ev<events.length)pushDup(events[ev++]);
+    for(const k of Object.keys(issueTotals))if(!issueTotals[k])delete issueTotals[k];
+    view.issues=issues;view.issueTotals=issueTotals;view.issuesTruncated=Object.values(issueTotals).some(n=>n>ISSUE_LIST_LIMIT);
+    // 4. Attendance per person-day, from each row's accept/finish times (same rules as before, one group at a time).
+    yield* this.observationSteps(view);
+    return view;
+  }
+  *observationSteps(view){
+    const {count,files,WF,WR}=view,groups=new Map(),slotGroup=new Grow(Int32Array,Math.max(1024,count*1.2|0)),slotOf=new Grow(Int32Array,Math.max(1024,count*1.2|0)),meta=[];
+    for(let s=0;s<count;s++){
+      if(s%SLICE===0&&s)yield {phase:'attendance',done:s,total:count*2};
+      const f=files[WF[s]],r=WR[s],c=f.cols,a=Number.isNaN(c.accept[r])?null:c.accept[r],b=c.finish[r],ad=stampDay(a),bd=stampDay(b);
+      const o=f.opMap[c.op[r]],blank=Boolean(c.flags[r]&FLAG.opBlank),area=f.areaMap[c.area[r]];
+      for(const day of bd!==ad&&ad?[ad,bd]:[bd]){
+        const key=day+'|'+o+(blank?'|'+area:'');let g=groups.get(key);
+        if(g===undefined){g=meta.length;groups.set(key,g);meta.push({day,firstSlot:s,size:0});}
+        meta[g].size++;slotGroup.push(g);slotOf.push(s);
+      }
+    }
+    // Rows grouped by person-day (stable, keeps reading order), then each group is evaluated and released.
+    const start=new Int32Array(meta.length+1);for(let g=0;g<meta.length;g++)start[g+1]=start[g]+meta[g].size;
+    const fill=start.slice(0,meta.length),members=new Int32Array(slotOf.n);
+    for(let i=0;i<slotOf.n;i++)members[fill[slotGroup.a[i]]++]=slotOf.a[i];
+    const out=[],identity={sameNameIsIdentity:true},oneArea={get:()=>({size:1})};
+    // Yield by rows evaluated (not by groups), so large person-days never stall the page.
+    let sinceYield=0;
+    for(let g=0;g<meta.length;g++){
+      if(sinceYield>=40000){sinceYield=0;yield {phase:'attendance',done:count+Math.round(start[g]/members.length*count),total:count*2};}
+      sinceYield+=start[g+1]-start[g];
+      const list=members.subarray(start[g],start[g+1]),day=meta[g].day;let o=null;
+      for(const s of list){const rec=view.attendanceRecord(s);if(!o)o=newObservation(day,rec,!rec.raw.操作员.trim()?false:true);accumulateObservation(o,rec,day);}
+      finishObservation(o,identity,oneArea);
+      Object.defineProperty(o,'sources',{enumerable:true,configurable:true,get:()=>Array.from(list,s=>view.sourceOf(WF[s],WR[s]))});
+      out.push(o);
+    }
+    view.observations=out.sort((a,b)=>a.day.localeCompare(b.day)||a.operator.localeCompare(b.operator,'zh-CN'));
+  }
+  makeView({files,WF,WR,count,cells,minDay,maxDay,today,dup,issueTotals,otherTypes}){
+    const dicts=this.dicts,todayExcluded=files.reduce((n,f)=>n+f.todayCount,0),day=d=>stampDay(d*DAY_MS);
+    let range=count?{start:day(minDay),end:day(maxDay)}:null;
+    // A file that contained today's rows was exported up to now, so yesterday is a complete day (shown even with 0).
+    if(range&&todayExcluded&&today){const y=previousDay(today);if(y>range.end)range={start:range.start,end:y};}
+    const view={files,WF,WR,count,cells,range,rawRange:range,today,todayExcluded,dup,otherTypes,
+      areas:dicts.area,operators:dicts.op,types:dicts.type,
+      // Names that still have kept rows (dictionaries also remember removed files).
+      get activeAreas(){return [...new Set(Array.from(cells.area,i=>dicts.area[i]))];},
+      get activeOperators(){return [...new Set(Array.from(cells.op,i=>dicts.op[i]))];},
+      hasArea(a){const i=dicts.area.indexOf(a);return i>=0&&cells.area.includes(i);},
+      hasOperator(o){const i=dicts.op.indexOf(o);return i>=0&&cells.op.includes(i);},
+      skipped:{width:files.reduce((n,f)=>n+f.errorCount,0),finish:files.reduce((n,f)=>n+f.skippedFinish.count,0)},
+      sourceOf(fi,r){const f=files[fi];return {fileId:f.fileId,fileName:f.fileName,recordIndex:f.cols.recordIndex[r],startLine:f.cols.line[r]};},
+      taskText(s){const f=files[WF[s]],r=WR[s],v=f.cols.task[r];return Number.isNaN(v)?f.extra.get(r).t:String(v);},
+      // Display record for one kept row (same fields the tables used before).
+      record(s){
+        const f=files[WF[s]],r=WR[s],c=f.cols,x=f.extra.get(r)||{},finish=c.finish[r],accept=Number.isNaN(c.accept[r])?null:c.accept[r],p=c.packages[r],w=c.weight[r];
+        const op=dicts.op[f.opMap[c.op[r]]],area=dicts.area[f.areaMap[c.area[r]]],type=dicts.type[f.typeMap[c.type[r]]],flags=c.flags[r];
+        // Exact original text of the statistics columns (other columns are re-read from the file when exported).
+        const raw={任务编号:x.t??String(c.task[r]),任务小类:flags&ISSUE_BIT.type_missing?x.ty??'':type,关联包裹数:x.p??(p===NO_PACKAGES?'':String(p)),所属区域:flags&ISSUE_BIT.area_missing?x.ar??'':area,操作员:flags&FLAG.opBlank?x.o??'':op,接单时间:x.a??(accept===null?'':stampText(accept)),完成时间:x.f??stampText(finish)};
+        if(f.hasWeight)raw['操作后的包裹重量(g)']=x.w??(Number.isNaN(w)?'':String(w));
+        return {id:'r'+s,slot:s,raw,
+          sources:[view.sourceOf(WF[s],r)],finishDay:stampDay(finish),finishStamp:finish,acceptStamp:accept,operator:op,area,type,packages:p===NO_PACKAGES?null:p,weightGrams:Number.isNaN(w)?null:w};
+      },
+      attendanceRecord(s){
+        const f=files[WF[s]],r=WR[s],c=f.cols,accept=Number.isNaN(c.accept[r])?null:c.accept[r],op=dicts.op[f.opMap[c.op[r]]];
+        return {id:'r'+s,acceptStamp:accept,finishStamp:c.finish[r],operator:op,area:dicts.area[f.areaMap[c.area[r]]],sources:[view.sourceOf(WF[s],r)],raw:{操作员:c.flags[r]&FLAG.opBlank?'':op,get 任务编号(){return view.taskText(s);}}};
+      },
+      rowIssues(s){
+        const rec=view.record(s),f=files[WF[s]],r=WR[s],flags=f.cols.flags[r],x=f.extra.get(r)||{},out=[];
+        const add=(code,message,rawValue=null,effectiveValue=null)=>out.push({code,message,recordId:rec.id,sources:rec.sources,finishDay:rec.finishDay,area:rec.area,operator:rec.operator,rawValue,effectiveValue});
+        if(flags&ISSUE_BIT.weight_invalid)add('weight_invalid',(flags&FLAG.weightMissing?'操作后的包裹重量缺失':'操作后的包裹重量无法解析或数值异常')+'；重量合计仅包含有效值',x.w??'');
+        if(flags&ISSUE_BIT.accept_invalid)add('accept_invalid','接单时间缺失或无法识别；出勤信息不完整',rec.raw.接单时间);
+        if(flags&ISSUE_BIT.operator_missing)add('operator_missing','操作员缺失，归入未识别操作员');
+        if(flags&ISSUE_BIT.area_missing)add('area_missing','所属区域缺失，归入未识别区域');
+        if(flags&ISSUE_BIT.task_missing)add('task_missing','任务编号缺失，保留作业并请核实');
+        if(flags&ISSUE_BIT.type_missing)add('type_missing','任务小类缺失，归入未识别任务');
+        if(flags&ISSUE_BIT.time_reversed)add('time_reversed','接单时间晚于完成时间，不据此推定作业跨度');
+        if(flags&ISSUE_BIT.cross_day)add('cross_day','跨日作业，完成单量归完成日期，时间观察保留跨日标记');
+        if(flags&ISSUE_BIT.duration_mismatch)add('duration_mismatch','任务耗时与接单至完成的秒数不一致',x.d);
+        if(flags&ISSUE_BIT.package_adjusted)add('package_adjusted','单箱增值关联包裹数至少计1',rec.raw.关联包裹数,rec.packages);
+        if(flags&ISSUE_BIT.package_zero)add('package_zero','非单箱增值关联包裹数为0，请核实',rec.raw.关联包裹数.trim(),0);
+        if(flags&ISSUE_BIT.package_unknown)add('package_unknown','关联包裹数未知，作业单量仍计入，包裹合计暂不包含此项',rec.raw.关联包裹数);
+        return out;
+      }
+    };
+    return view;
+  }
+}
+
+return {ISSUE_LIST_LIMIT,runSync,runSliced,Ledger};
+})();
+const __view=(()=>{
+// Statistics read from the summary table (ledger.mjs). Same names and same output shapes as the
+// earlier record-based functions (stats/attendance/quality/export), so the page and the Excel
+// export keep their behaviour while no longer walking every original row.
+const {dateDays,dayStamp,areaFilters,personFilters,period,contributionText}=__stats;
+const {attendanceLabel}=__attendance;
+const {issueCategory}=__quality;
+const {parseStamp,stampDay}=__rules;
+
+const DAY_MS=86400000;
+const viewCache=new WeakMap();
+function cacheOf(view){let c=viewCache.get(view);if(!c){c={areaId:new Map(view.areas.map((a,i)=>[a,i])),opId:new Map(view.operators.map((o,i)=>[o,i])),dayText:Array.from(view.cells.day,d=>stampDay(d*DAY_MS)),match:new Map(),sel:new Map(),sum:new Map(),obs:new Map(),quality:new Map(),detail:new Map()};viewCache.set(view,c);}return c;}
+
+// Cells of the summary table inside a scope, in first-occurrence order.
+function matchCells(view,{start,end,area,operator}){
+  const c=cacheOf(view),key=JSON.stringify([start,end,area||null,operator||null]);
+  if(!c.match.has(key)){
+    const a=area?c.areaId.get(area)??-1:null,o=operator?c.opId.get(operator)??-1:null,out=[],cells=view.cells;
+    for(let i=0;i<cells.length;i++){const d=c.dayText[i];if((start&&d<start)||(end&&d>end))continue;if(a!==null&&cells.area[i]!==a)continue;if(o!==null&&cells.op[i]!==o)continue;out.push(i);}
+    c.match.set(key,Int32Array.from(out));
+  }
+  return c.match.get(key);
+}
+
+// A selection stands for "the kept records inside these filters" (formerly an array of records).
+function selectRecords(view,filters){
+  dateDays(filters.start,filters.end);
+  const c=cacheOf(view),key=JSON.stringify([filters.start,filters.end,filters.area||null,filters.operator||null]);
+  if(!c.sel.has(key))c.sel.set(key,{view,start:filters.start,end:filters.end,area:filters.area||null,operator:filters.operator||null});
+  return c.sel.get(key);
+}
+const narrowSelection=(sel,range)=>selectRecords(sel.view,{start:range.start<sel.start?sel.start:range.start,end:range.end>sel.end?sel.end:range.end,area:sel.area,operator:sel.operator});
+
+function emptyTotals(){return {orders:0,packagesKnown:0,packagesUnknown:0,weightGrams:0,weightCompensation:0,weightValid:0,weightUnknown:0,days:new Set(),areas:new Set(),types:new Map()};}
+function addCell(t,view,i,day){
+  const c=view.cells,orders=c.orders[i];
+  t.orders+=orders;t.packagesUnknown+=c.pkUnknown[i];t.packagesKnown+=c.pkKnown[i];
+  if(c.wValid[i]){const y=(c.wSum[i]-c.wComp[i])-t.weightCompensation,next=t.weightGrams+y;t.weightCompensation=(next-t.weightGrams)-y;t.weightGrams=next;t.weightValid+=c.wValid[i];}
+  t.weightUnknown+=c.wUnknown[i];
+  t.days.add(day);t.areas.add(view.areas[c.area[i]]);const type=view.types[c.type[i]];t.types.set(type,(t.types.get(type)||0)+orders);
+}
+function finish(t){return {orders:t.orders,packagesKnown:t.packagesKnown,packagesUnknown:t.packagesUnknown,weightKg:t.orders===0?0:t.weightValid?t.weightGrams/1000:null,weightValid:t.weightValid,weightUnknown:t.weightUnknown,recordDays:t.days.size,areas:[...t.areas].sort(),types:Object.fromEntries(t.types)};}
+function summarize(sel,filters){
+  const view=sel.view,c=cacheOf(view),key=JSON.stringify([sel.start,sel.end,sel.area,sel.operator,filters.start,filters.end,filters.grain]);
+  if(c.sum.has(key))return c.sum.get(key);
+  const days=dateDays(filters.start,filters.end),total=emptyTotals(),byArea=new Map(),byOperator=new Map(),byType=new Map(),buckets=new Map();
+  for(const day of days){const p=period(day,filters.grain);if(!buckets.has(p.key))buckets.set(p.key,{...p,start:p.naturalStart<filters.start?filters.start:p.naturalStart,end:p.naturalEnd>filters.end?filters.end:p.naturalEnd,totals:emptyTotals()});}
+  const lo=sel.start>filters.start?sel.start:filters.start,hi=sel.end<filters.end?sel.end:filters.end;
+  for(const i of matchCells(view,{start:lo,end:hi,area:sel.area,operator:sel.operator})){
+    const day=c.dayText[i];addCell(total,view,i,day);
+    for(const [map,k] of [[byArea,view.areas[view.cells.area[i]]],[byOperator,view.operators[view.cells.op[i]]],[byType,view.types[view.cells.type[i]]]]){if(!map.has(k))map.set(k,emptyTotals());addCell(map.get(k),view,i,day);}
+    addCell(buckets.get(period(day,filters.grain).key).totals,view,i,day);
+  }
+  const groups=map=>[...map].sort(([a],[b])=>a.localeCompare(b,'zh-CN')).map(([name,t])=>({name,...finish(t)}));
+  const out={...finish(total),byArea:groups(byArea),byOperator:groups(byOperator),byType:groups(byType),buckets:[...buckets.values()].map(b=>({key:b.key,start:b.start,end:b.end,partial:b.start!==b.naturalStart||b.end!==b.naturalEnd,...finish(b.totals)}))};
+  c.sum.set(key,out);return out;
+}
+function buildRegionTrend(sel,filters,areas){
+  const selected=filters.area?[filters.area]:areas;
+  const names=[...new Set(selected)].sort((a,b)=>a.localeCompare(b,'zh-CN'));
+  const total=summarize(sel,filters);
+  const series=names.map(area=>({area,buckets:summarize(selectRecords(sel.view,{start:sel.start,end:sel.end,area,operator:sel.operator}),filters).buckets}));
+  return {areas:names,buckets:total.buckets.map((b,i)=>({key:b.key,start:b.start,end:b.end,partial:b.partial,total:b.orders,values:Object.fromEntries(series.map(s=>[s.area,s.buckets[i].orders]))}))};
+}
+function dailyAreaContributions(sel){
+  const view=sel.view,c=cacheOf(view),days=new Map();
+  for(const i of matchCells(view,sel)){const day=c.dayText[i],areas=days.get(day)||new Map(),area=view.areas[view.cells.area[i]];areas.set(area,(areas.get(area)||0)+view.cells.orders[i]);days.set(day,areas);}
+  return new Map([...days].map(([day,areas])=>[day,[...areas].sort(([a],[b])=>a.localeCompare(b,'zh-CN')).map(([area,orders])=>({area,orders}))]));
+}
+// Days without any kept record: the whole view, or one selection's area/operator.
+function classifyMissingDays(scope,start,end){
+  const view=scope.view||scope,c=cacheOf(view),present=new Set();
+  for(const i of matchCells(view,{area:scope.view?scope.area:null,operator:scope.view?scope.operator:null}))present.add(c.dayText[i]);
+  return dateDays(start,end).filter(day=>!present.has(day)).map(day=>{const weekday=new Date(dayStamp(day)).getUTCDay();return {day,weekday,kind:weekday===0||weekday===6?'weekend':'weekday'};});
+}
+// Attendance was evaluated once per person-day at import; a range or operator only selects them.
+function observeDays(view,filters){
+  const c=cacheOf(view),key=JSON.stringify([filters.start,filters.end,filters.operator||null]);
+  if(!c.obs.has(key))c.obs.set(key,view.observations.filter(o=>o.day>=filters.start&&o.day<=filters.end&&(!filters.operator||o.operator===filters.operator)));
+  return c.obs.get(key);
+}
+// Kept rows (slots) inside date range, area and operator, in original order.
+function selectDetailRecords(view,filters){
+  const c=cacheOf(view),key=JSON.stringify([filters.start,filters.end,filters.area||null,filters.operator||null]);
+  if(!c.detail.has(key)){
+    const lo=Math.floor(dayStamp(filters.start)/DAY_MS),hi=Math.floor(dayStamp(filters.end)/DAY_MS),a=filters.area?c.areaId.get(filters.area)??-1:null,o=filters.operator?c.opId.get(filters.operator)??-1:null,out=[];
+    for(let s=0;s<view.count;s++){const d=view.slotDay[s];if(d<lo||d>hi||(a!==null&&view.slotArea[s]!==a)||(o!==null&&view.slotOp[s]!==o))continue;out.push(s);}
+    c.detail.set(key,Int32Array.from(out));
+  }
+  return c.detail.get(key);
+}
+function scopedIssues(view,filters){
+  return view.issues.filter(i=>(!i.finishDay||(i.finishDay>=filters.start&&i.finishDay<=filters.end))&&(!filters.area||!i.area||i.area===filters.area)&&(!filters.operator||!i.operator||i.operator===filters.operator));
+}
+function qualityIssues(view,filters){
+  const c=cacheOf(view),key=JSON.stringify([filters.start,filters.end,filters.area||null,filters.operator||null]);
+  if(c.quality.has(key))return c.quality.get(key);
+  const base=scopedIssues(view,filters).map(i=>{
+    const r=i.recordId?view.record(Number(i.recordId.slice(1))):null,raw=r?.raw;
+    let reason=i.message;
+    if(i.code.startsWith('package_')&&raw){
+      const value=raw.关联包裹数.trim(),n=Number(value);
+      reason=(value===''?'关联包裹数缺失':!Number.isFinite(n)?'关联包裹数无法解析为数字':!Number.isSafeInteger(n)||n<0?'关联包裹数为非法数值':n===0?'关联包裹数为0':'关联包裹数异常')+'；'+i.message;
+    }
+    return {...i,category:issueCategory(i.code),task:raw?.任务编号||'',type:r?.type||'',rawPackage:raw?.关联包裹数??'',message:reason};
+  });
+  // Composition check per person and person-day (all areas), from the summary table; listing order follows the original rows.
+  const scope=personFilters(filters),cells=view.cells,single=view.types.indexOf('单箱增值'),merged=view.types.indexOf('合箱增值');
+  const people=new Map();
+  for(const i of matchCells(view,scope)){
+    const o=cells.op[i],day=c.dayText[i],first=cells.firstSlot[i];
+    let p=people.get(o);if(!p){p={first,days:new Map(),...group()};people.set(o,p);}if(first<p.first)p.first=first;
+    let g=p.days.get(day);if(!g){g={first,dayIndex:cells.day[i],...group()};p.days.set(day,g);}if(first<g.first)g.first=first;
+    for(const t of [p,g]){t.orders+=cells.orders[i];if(cells.type[i]===single)t.single+=cells.orders[i];if(cells.type[i]===merged)t.merged+=cells.orders[i];const a=cells.area[i];if(!t.areas.has(a)||first<t.areas.get(a))t.areas.set(a,first);}
+  }
+  function group(){return {orders:0,single:0,merged:0,areas:new Map()};}
+  const others=(o,dayIndexes)=>dayIndexes.flatMap(d=>view.otherTypes.get(o*1048576+d)||[]).sort((x,y)=>x-y).map(s=>view.sourceOf(view.WF[s],view.WR[s]));
+  const push=(person,day,g,sources)=>{
+    if(g.single+g.merged===g.orders)return;
+    base.push({code:'composition_mismatch',category:'作业构成不一致',operator:person,area:[...g.areas].sort((x,y)=>x[1]-y[1]).map(([a])=>view.areas[a]).join('、'),finishDay:day||null,task:'',type:'',rawPackage:'',sources:sources(),
+      message:(day?day:'当前范围合计')+'：单箱'+g.single+' + 合箱'+g.merged+' ≠ 完成单量'+g.orders+'；存在其他或未识别任务类型，请核实',rawValue:g.orders,effectiveValue:g.single+g.merged});
+  };
+  for(const [o,p] of [...people].sort((x,y)=>x[1].first-y[1].first)){
+    const days=[...p.days].sort((x,y)=>x[1].first-y[1].first),person=view.operators[o];
+    push(person,null,p,()=>others(o,days.map(([,g])=>g.dayIndex)));
+    for(const [day,g] of days)push(person,day,g,()=>others(o,[g.dayIndex]));
+  }
+  for(const o of observeDays(view,filters))if(o.status==='待核实'){
+    const eventSources=o.gapEvents.flatMap(e=>[...e.previous.sources,...e.next.sources]);
+    const allSources=o.sources,sources=o.gapEvents.length?[...new Map(eventSources.map(s=>[JSON.stringify(s),s])).values()]:allSources;
+    base.push({code:'attendance_pending',category:'时间字段异常',operator:o.operator,identityKey:o.identityKey,area:o.area,finishDay:o.day,sources,allSources,gapEvents:o.gapEvents,reasonCodes:o.reasonCodes,message:'出勤待核实：'+o.pendingReasons.join('；')});
+  }
+  c.quality.set(key,base);return base;
+}
+
+const text=value=>({type:'text',value:value??''}),num=value=>({type:'number',value}),date=stamp=>({type:'date',value:stamp/86400000+25569});
+const tuple=(...values)=>values.map(v=>typeof v==='number'?num(v):text(v));
+const packages=r=>r.packages===null?text(''):num(r.packages);
+function makeExportSheets(view,filters,options){
+  if(!options.sections.length)throw new Error('请选择导出内容');
+  const areaSel=selectRecords(view,areaFilters(filters)),personSel=selectRecords(view,personFilters(filters)),s=summarize(areaSel,filters),ps=summarize(personSel,filters),sheets=[];
+  const withWeight=options.includeWeight!==false,weightCell=v=>v===null?text(''):num(v);
+  sheets.push({name:'范围与口径',rows:[tuple('项目','内容'),tuple('查看日期',filters.start+'～'+filters.end),tuple('全部数据范围',view.range?view.range.start+'～'+view.range.end:'无'),tuple('区域',filters.area||'全部区域'),tuple('操作员',filters.operator||'全部操作员'),tuple('汇总方式',{day:'日',week:'周',month:'月'}[filters.grain]),tuple('日期口径','按CSV业务本地时间；完成单量归完成日期，包含起止当天'),tuple('单量口径','按任务编号去重（同一编号保留文件修改时间较新的一条）后，有效完成日期的每行作业计1单'),tuple('包裹口径','单箱增值至少计1；仅累计可统计的包裹数，异常统一见数据检查'),tuple('出勤口径','出勤及加班时间根据作业记录推定，仅供现场管理参考，实际考勤与工资核算以真实劳动时间及有效考勤记录为准。导入时已排除当天（日本时间）未完成的记录。')]});
+  if(options.sections.includes('summary')){
+    sheets.push({name:'统计汇总',rows:[tuple('指标','值'),tuple('完成单量',s.orders),tuple('关联包裹数',s.packagesKnown),...(withWeight?[[text('处理重量（kg）'),weightCell(s.weightKg)]]:[]),tuple('有记录日数',s.recordDays)]});
+    const table=(name,list,types)=>({name,rows:[tuple('名称','所属区域','完成单量','关联包裹数',...(withWeight?['处理重量（kg）']:[]),'有记录日数',...types.map(t=>t.name+'单量')),...list.map(r=>[...tuple(r.name,r.areas.join('、'),r.orders,r.packagesKnown),...(withWeight?[weightCell(r.weightKg)]:[]),...tuple(r.recordDays,...types.map(t=>r.types[t.name]||0))])]});
+    sheets.push(table('区域统计',s.byArea,s.byType),table('操作员统计',ps.byOperator,ps.byType));
+    const observations=observeDays(view,personFilters(filters)).filter(o=>!o.incomplete),daily=[];
+    for(const person of ps.byOperator){
+      const items=selectRecords(view,{...personFilters(filters),operator:person.name}),contributions=dailyAreaContributions(items),summary=summarize(items,{...filters,grain:'day'});
+      for(const b of summary.buckets.filter(b=>b.orders)){
+        const obs=observations.filter(o=>o.operator===person.name&&o.day===b.start);
+        daily.push([date(dayStamp(b.start)),...tuple(person.name,contributionText(contributions.get(b.start)),b.orders,b.packagesKnown),...(withWeight?[weightCell(b.weightKg)]:[]),...tuple(b.types['单箱增值']||0,b.types['合箱增值']||0,obs.map(o=>o.firstAccept||'未知').join('；'),obs.map(o=>o.lastFinish||'未知').join('；'),obs.map(attendanceLabel).join('；'))]);
+      }
+    }
+    sheets.push({name:'个人每日明细',rows:[tuple('日期','操作员','区域完成单量构成','完成单量','关联包裹数',...(withWeight?['处理重量（kg）']:[]),'单箱增值','合箱增值','最早接单','最后完成','推定出勤情况'),...daily]});
+    sheets.push({name:'日期趋势',rows:[tuple('开始日期','结束日期','时段说明','完成单量','关联包裹数',...(withWeight?['处理重量（kg）']:[])),...s.buckets.map(b=>[date(dayStamp(b.start)),date(dayStamp(b.end)),...tuple(b.partial?'部分时段':'',b.orders,b.packagesKnown),...(withWeight?[weightCell(b.weightKg)]:[])])]});
+  }
+  if(options.sections.includes('detail')){
+    if(!options.detailFields.length)throw new Error('请选择至少一个作业明细字段');
+    const rows=[tuple(...options.detailFields,'统计关联包裹数','来源文件与位置')];
+    for(const slot of selectDetailRecords(view,filters)){const r=view.record(slot);rows.push([...options.detailFields.map(k=>{if(k==='处理重量（kg）')return weightCell(r.weightGrams===null?null:r.weightGrams/1000);const value=(k in r.raw?r.raw[k]:options.extraValue?.(r,k))??'';const t=k.endsWith('时间')?parseStamp(value):null;return t===null?text(value):date(t);}),packages(r),text(r.sources.map(x=>`${x.fileName} 第${x.startLine}行`).join('；'))]);}
+    sheets.push({name:'作业明细',rows});
+  }
+  if(options.sections.includes('attendance')){
+    const obs=observeDays(view,filters).filter(o=>!o.incomplete);
+    sheets.push({name:'出勤辅助',rows:[tuple('日期','操作员','区域','首次接单记录','最后完成记录','作业记录跨度（秒）','出勤状态'),...obs.map(o=>[date(dayStamp(o.day)),text(o.operator),text(o.area),o.firstAccept?date(parseStamp(o.firstAccept)):text('未知'),o.lastFinish?date(parseStamp(o.lastFinish)):text('未知'),o.spanSeconds===null?text('未知'):num(o.spanSeconds),text(attendanceLabel(o))])]});
+    sheets.push({name:'小时分布',rows:[tuple('日期','操作员','区域','小时','接单记录数','完成记录数'),...obs.flatMap(o=>o.acceptHours.map((n,h)=>[date(dayStamp(o.day)),...tuple(o.operator,o.area,h,n,o.finishHours[h])]))]});
+  }
+  if(options.sections.includes('issues')){
+    sheets.push({name:'数据检查',rows:[tuple('分类','类型','任务编号','任务类型','说明','日期归属','区域','操作员','原始关联包裹数','原始值','统计值','来源'),...qualityIssues(view,filters).map(i=>tuple(i.category,i.code,i.task,i.type,i.message,i.finishDay||'当前范围 / 未归属日期（全局待核实）',i.area||'',i.operator||'',i.rawPackage||'空',i.rawValue??'',i.effectiveValue??'',i.sources.map(x=>`${x.fileName} 第${x.startLine}行`).join('；')))]});
+    const globalMissing=classifyMissingDays(view,filters.start,filters.end),localMissing=classifyMissingDays(areaSel,filters.start,filters.end);
+    sheets.push({name:'无记录日期',rows:[tuple('检查范围','日期','星期','说明'),...[['全部导入数据',globalMissing],['当前筛选',localMissing]].flatMap(([scope,list])=>list.map(d=>[text(scope),date(dayStamp(d.day)),text('日一二三四五六'[d.weekday]),text(d.kind==='weekend'?'周末无作业记录':'工作日未发现作业记录，请核实')]))]});
+  }
+  sheets[0].rows.push(tuple('区域分析范围','当前日期与区域；不受操作员筛选影响'),tuple('人员分析范围','当前日期与操作员；全部已导入区域，完整姓名相同为同一人员，数字后缀保留'),tuple('原始作业明细范围','当前日期、区域与操作员共同筛选；原始区域保留'),tuple('个人每日明细口径','有效完成日期有记录日，每人每日一行，跨区域合计；出勤来自统一人员日期结果'),tuple('数据检查范围','原始提示按日期、区域与操作员追溯；人员出勤提示按日期与操作员跨区域汇总'));
+  return sheets;
+}
+
+// Rows for the merged CSV: every kept row completed before `beforeDay` (the export day, Japan time).
+// picks[fileId] = {lines: recordIndex ascending, hashHi, hashLo}; output order is file order, then row order.
+function exportPicks(view,beforeDay){
+  const cut=Math.floor(dayStamp(beforeDay)/DAY_MS),byFile=new Map();let count=0,lo=Infinity,hi=-Infinity;
+  for(let s=0;s<view.count;s++){const day=view.slotDay[s];if(day>=cut)continue;const fi=view.WF[s];let list=byFile.get(fi);if(!list){list=[];byFile.set(fi,list);}list.push(view.WR[s]);count++;if(day<lo)lo=day;if(day>hi)hi=day;}
+  const picks={};
+  for(const [fi,rows] of byFile){const f=view.files[fi],c=f.cols;rows.sort((x,y)=>c.recordIndex[x]-c.recordIndex[y]);picks[f.fileId]={lines:Uint32Array.from(rows,r=>c.recordIndex[r]),hashHi:Uint32Array.from(rows,r=>c.hashHi[r]),hashLo:Uint32Array.from(rows,r=>c.hashLo[r])};}
+  return {picks,count,range:count?{start:stampDay(lo*DAY_MS),end:stampDay(hi*DAY_MS)}:null};
+}
+
+return {selectRecords,narrowSelection,summarize,buildRegionTrend,dailyAreaContributions,classifyMissingDays,observeDays,selectDetailRecords,scopedIssues,qualityIssues,makeExportSheets,exportPicks};
+})();
+const __WORKER_SOURCE="const __csv=(()=>{\nconst CORE_HEADERS=['任务编号','任务小类','关联包裹数','所属区域','操作员','接单时间','完成时间'];\n\n// 追加文件的列名检查：比较去除首尾空格后的列名集合；只是列顺序不同视为相同。\nfunction headerDifference(base,headers){\n  const a=new Set(base),b=new Set(headers);\n  return {missing:base.filter(h=>!b.has(h)),added:headers.filter(h=>!a.has(h))};\n}\n\nfunction decodeCsv(bytes){\n  for(const encoding of ['utf-8','gb18030']){\n    try { return {text:new TextDecoder(encoding,{fatal:true}).decode(bytes).replace(/^\\uFEFF/,''),encoding}; }\n    catch(e){ if(encoding==='gb18030')throw new Error('无法识别文件编码，请导出为 UTF-8 CSV'); }\n  }\n}\n\nfunction parseCsv(text,fileId,fileName){\n  text=text.replace(/^\\uFEFF/,'');\n  const logical=[];\n  let values=[],field='',quoted=false,closed=false,line=1,startLine=1;\n  const pushField=()=>{values.push(field);field='';closed=false;};\n  const pushRow=()=>{pushField();logical.push({values,startLine});values=[];startLine=line+1;};\n  for(let i=0;i<text.length;i++){\n    const ch=text[i];\n    if(quoted){\n      if(ch==='\"'){if(text[i+1]==='\"'){field+='\"';i++;}else{quoted=false;closed=true;}}\n      else{field+=ch;if(ch==='\\n')line++;}\n    }else if(ch==='\"'){\n      if(field!==''||closed)throw new Error(`第${line}行引号位置错误`);\n      quoted=true;\n    }else if(ch===','){pushField();}\n    else if(ch==='\\n'||ch==='\\r'){\n      if(ch==='\\r'&&text[i+1]==='\\n')i++;\n      pushRow();line++;\n    }else{\n      if(closed)throw new Error(`第${line}行引号后有多余内容`);\n      field+=ch;\n    }\n  }\n  if(quoted)throw new Error(`第${startLine}行引号未闭合`);\n  if(field!==''||values.length||closed){pushField();logical.push({values,startLine});}\n  const nonempty=logical.filter(r=>r.values.some(v=>v!==''));\n  if(!nonempty.length)throw new Error('文件为空');\n  const archiveHeaders=nonempty.shift().values.slice();\n  const headers=archiveHeaders.map(h=>h.trim());\n  if(headers.some(h=>!h)||new Set(headers).size!==headers.length)throw new Error('表头为空或有重复列名');\n  const missing=CORE_HEADERS.filter(h=>!headers.includes(h));\n  if(missing.length)throw new Error('缺少必需字段：'+missing.join('、'));\n  const rows=[],errors=[];\n  nonempty.forEach((r,index)=>{\n    const source={fileId,fileName,recordIndex:index+1,startLine:r.startLine};\n    if(r.values.length!==headers.length){errors.push({code:'row_width',message:`列数错误：需要${headers.length}列，实际${r.values.length}列`,sources:[source],recordId:null,finishDay:null,area:null,operator:null});return;}\n    rows.push({raw:Object.fromEntries(headers.map((h,j)=>[h,r.values[j]])),source});\n  });\n  return {fileId,fileName,headers,archiveHeaders,rows,errors};\n}\n// Merged CSV output: every value quoted, CRLF line ends (same bytes as the previous archive writer).\nconst csvQuote=s=>'\"'+s.replace(/\"/g,'\"\"')+'\"';\nconst csvHeaderLine=headers=>headers.map(csvQuote).join(',')+'\\r\\n';\nconst csvRowLine=(headers,raw)=>headers.map(h=>csvQuote(raw[h.trim()])).join(',')+'\\r\\n';\n\nreturn {CORE_HEADERS,headerDifference,decodeCsv,parseCsv,csvHeaderLine,csvRowLine};\n})();\nconst __weight=(()=>{\nconst WEIGHT_FIELD='操作后的包裹重量(g)';\nfunction parseWeight(value){\n  const raw=String(value??'').trim();\n  if(!raw)return {grams:null,reason:'操作后的包裹重量缺失'};\n  const n=Number(raw);\n  if(!/^[+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:e[+-]?\\d+)?$/i.test(raw)||!Number.isFinite(n)||n<0||n>Number.MAX_SAFE_INTEGER)return {grams:null,reason:'操作后的包裹重量无法解析或数值异常'};\n  return {grams:n,reason:null};\n}\nfunction formatKg(value){\n  return value===null||value===undefined?'—':new Intl.NumberFormat('zh-CN',{maximumFractionDigits:2}).format(value)+' kg';\n}\n\nreturn {WEIGHT_FIELD,parseWeight,formatKg};\n})();\nconst __hash=(()=>{\n// Content hashing shared by import and export: exact-row content keys (cyrb128) and SHA-256.\n// SHA-256 implemented locally: works offline without secure-context Web Crypto.\n// Incremental form lets large files be fingerprinted chunk by chunk; sha256(text) output is unchanged.\nconst SHA_K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];\nconst shaEncoder=new TextEncoder();\nfunction createSha256(){\n  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19],w=new Uint32Array(64),block=new Uint8Array(64),view=new DataView(block.buffer);\n  let fill=0,total=0;\n  const compress=()=>{\n    for(let i=0;i<16;i++)w[i]=view.getUint32(i*4);\n    for(let i=16;i<64;i++){const a=w[i-15],b=w[i-2];w[i]=(w[i-16]+(((a>>>7)|(a<<25))^((a>>>18)|(a<<14))^(a>>>3))+w[i-7]+(((b>>>17)|(b<<15))^((b>>>19)|(b<<13))^(b>>>10)))>>>0;}\n    let a=h[0],c=h[1],d=h[2],e=h[3],f=h[4],g=h[5],j=h[6],l=h[7];\n    for(let i=0;i<64;i++){const t=(l+(((f>>>6)|(f<<26))^((f>>>11)|(f<<21))^((f>>>25)|(f<<7)))+((f&g)^(~f&j))+SHA_K[i]+w[i])>>>0,u=((((a>>>2)|(a<<30))^((a>>>13)|(a<<19))^((a>>>22)|(a<<10)))+((a&c)^(a&d)^(c&d)))>>>0;l=j;j=g;g=f;f=(e+t)>>>0;e=d;d=c;c=a;a=(t+u)>>>0;}\n    h[0]=(h[0]+a)>>>0;h[1]=(h[1]+c)>>>0;h[2]=(h[2]+d)>>>0;h[3]=(h[3]+e)>>>0;h[4]=(h[4]+f)>>>0;h[5]=(h[5]+g)>>>0;h[6]=(h[6]+j)>>>0;h[7]=(h[7]+l)>>>0;\n  };\n  const api={\n    update(bytes){total+=bytes.length;let i=0;while(i<bytes.length){const n=Math.min(64-fill,bytes.length-i);block.set(bytes.subarray(i,i+n),fill);fill+=n;i+=n;if(fill===64){compress();fill=0;}}return api;},\n    updateText(text){return api.update(shaEncoder.encode(text));},\n    digest(){\n      const bits=total*8;block[fill++]=128;\n      if(fill>56){block.fill(0,fill);compress();fill=0;}\n      block.fill(0,fill,56);view.setUint32(56,Math.floor(bits/4294967296));view.setUint32(60,bits>>>0);compress();\n      return h.map(v=>v.toString(16).padStart(8,'0')).join('');\n    }\n  };\n  return api;\n}\nfunction sha256(text){return createSha256().updateText(text).digest();}\nconst recordKey=raw=>JSON.stringify(Object.keys(raw).sort().map(k=>[k,raw[k]]));\n// Fast 128-bit content key (cyrb128) of the complete row text, used for exact-duplicate matching.\n// Two rows share a key only when every column value is identical (collision chance negligible at millions of rows).\nfunction contentKey(text){\n  let h1=1779033703,h2=3144134277,h3=1013904242,h4=2773480762;\n  for(let i=0,k;i<text.length;i++){k=text.charCodeAt(i);h1=h2^Math.imul(h1^k,597399067);h2=h3^Math.imul(h2^k,2869860233);h3=h4^Math.imul(h3^k,951274213);h4=h1^Math.imul(h4^k,2716044179);}\n  h1=Math.imul(h3^(h1>>>18),597399067);h2=Math.imul(h4^(h2>>>22),2869860233);h3=Math.imul(h1^(h3>>>17),951274213);h4=Math.imul(h2^(h4>>>19),2716044179);\n  h1^=(h2^h3^h4);h2^=h1;h3^=h1;h4^=h1;\n  return [h1,h2,h3,h4].map(v=>(v>>>0).toString(16).padStart(8,'0')).join('');\n}\nconst rowKeys=new WeakMap();\nfunction rowKey(raw){const primed=raw[Symbol.for('warehouse.rowKey')];if(primed!==undefined)return primed;let k=rowKeys.get(raw);if(k===undefined){k=contentKey(recordKey(raw));rowKeys.set(raw,k);}return k;}\nfunction primeRowKey(raw,key){raw[Symbol.for('warehouse.rowKey')]=key;}\nconst recordIds=new WeakMap();\n// Streaming import computes the identical id from the complete row before dropping unused text columns.\n// Precomputed values are attached under registry symbols: invisible to Object.keys/JSON, shared by every copy of this module.\nconst PRIMED_ID=Symbol.for('warehouse.recordId');\nfunction recordId(raw){const primed=raw[PRIMED_ID];if(primed!==undefined)return primed;if(!recordIds.has(raw))recordIds.set(raw,sha256(recordKey(raw)));return recordIds.get(raw);}\nfunction primeRecordId(raw,id){raw[PRIMED_ID]=id;}\n\nreturn {createSha256,sha256,recordKey,contentKey,rowKey,primeRowKey,recordId,primeRecordId};\n})();\nconst __rules=(()=>{\n// Per-row business rules shared by every import path: date parsing and the assessment of one CSV row.\n// Statistics rules live here once; both the reference record path and the aggregate path call assessRow.\nconst {parseWeight,WEIGHT_FIELD}=__weight;\n\n/** Business timestamps use UTC arithmetic solely to preserve literal calendar dates (no time-zone shift). */\nfunction parseStamp(value){\n  const m=String(value??'').trim().match(/^(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})[ T](\\d{1,2}):(\\d{2})(?::(\\d{2}))?$/);\n  if(!m)return null;\n  const [y,mo,d,h,mi,s]=m.slice(1).map((v,i)=>v===undefined?0:Number(v));\n  if(y<1900||mo<1||mo>12||d<1||h>23||mi>59||s>59)return null;\n  const t=Date.UTC(y,mo-1,d,h,mi,s),dt=new Date(t);\n  return dt.getUTCFullYear()===y&&dt.getUTCMonth()===mo-1&&dt.getUTCDate()===d?t:null;\n}\n// Calendar-day text cached per day index; same output as toISOString().slice(0,10).\nconst dayTexts=new Map();\nfunction stampDay(t){if(t===null)return null;const n=Math.floor(t/86400000);let s=dayTexts.get(n);if(s===undefined){s=new Date(t).toISOString().slice(0,10);dayTexts.set(n,s);}return s;}\nfunction stampText(t){return t===null?'':new Date(t).toISOString().slice(0,19).replace('T',' ');}\nfunction japanDate(now=new Date()){\n  return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);\n}\nfunction previousDay(day){return new Date(Date.parse(day+'T00:00:00Z')-86400000).toISOString().slice(0,10);}\n\n// Issue codes produced for one row, in the order the dashboard has always listed them.\nconst ROW_ISSUES=['weight_invalid','finish_invalid','accept_invalid','operator_missing','area_missing','task_missing','type_missing','time_reversed','cross_day','duration_mismatch','package_adjusted','package_zero','package_unknown'];\n\n// Assess one row (raw: column name → original text). Returns derived values plus issues\n// as [code,message,rawValue,effectiveValue] in display order.\nfunction assessRow(raw){\n  const finishStamp=parseStamp(raw.完成时间),acceptStamp=parseStamp(raw.接单时间),finishDay=stampDay(finishStamp);\n  const operator=raw.操作员.trim()?raw.操作员:'未识别操作员',area=raw.所属区域.trim()?raw.所属区域:'未识别区域',type=raw.任务小类.trim()?raw.任务小类:'未识别任务';\n  const issues=[],issue=(code,message,rawValue=null,effectiveValue=null)=>issues.push([code,message,rawValue,effectiveValue]);\n  const weight=parseWeight(raw[WEIGHT_FIELD]);\n  if(weight.reason)issue('weight_invalid',weight.reason+'；重量合计仅包含有效值',raw[WEIGHT_FIELD]??'');\n  if(finishStamp===null)issue('finish_invalid','完成时间缺失或无法识别；不进入日期统计',raw.完成时间);\n  if(acceptStamp===null)issue('accept_invalid','接单时间缺失或无法识别；出勤信息不完整',raw.接单时间);\n  if(!raw.操作员.trim())issue('operator_missing','操作员缺失，归入未识别操作员');\n  if(!raw.所属区域.trim())issue('area_missing','所属区域缺失，归入未识别区域');\n  if(!raw.任务编号.trim())issue('task_missing','任务编号缺失，保留作业并请核实');\n  if(!raw.任务小类.trim())issue('type_missing','任务小类缺失，归入未识别任务');\n  if(acceptStamp!==null&&finishStamp!==null){\n    if(acceptStamp>finishStamp)issue('time_reversed','接单时间晚于完成时间，不据此推定作业跨度');\n    else if(stampDay(acceptStamp)!==finishDay)issue('cross_day','跨日作业，完成单量归完成日期，时间观察保留跨日标记');\n    const seconds=raw.任务耗时?.trim();\n    if(seconds&&(!Number.isFinite(Number(seconds))||Number(seconds)<0||Number(seconds)!==(finishStamp-acceptStamp)/1000))issue('duration_mismatch','任务耗时与接单至完成的秒数不一致',seconds);\n  }\n  let packages=null;\n  const value=raw.关联包裹数.trim();const n=value===''?NaN:Number(value);\n  const valid=Number.isSafeInteger(n)&&n>=0;\n  if(type==='单箱增值'){\n    packages=valid?Math.max(n,1):1;\n    if(!valid||n<1)issue('package_adjusted','单箱增值关联包裹数至少计1',raw.关联包裹数,packages);\n  }else if(valid){packages=n;if(n===0)issue('package_zero','非单箱增值关联包裹数为0，请核实',value,0);}\n  else issue('package_unknown','关联包裹数未知，作业单量仍计入，包裹合计暂不包含此项',raw.关联包裹数);\n  return {finishStamp,acceptStamp,finishDay,operator,area,type,packages,weightGrams:weight.grams,weightReason:weight.reason,operatorBlank:!raw.操作员.trim(),issues};\n}\n\nreturn {parseStamp,stampDay,stampText,japanDate,previousDay,ROW_ISSUES,assessRow};\n})();\nconst __stream=(()=>{\n// Streaming CSV import: reads a file in chunks, decodes incrementally and parses row by row.\n// Grammar, line numbers and error messages match parseCsv in csv.mjs exactly. Callers receive each\n// row's values and decide what to keep; nothing is retained here after a row is handed over.\nconst {CORE_HEADERS,csvHeaderLine,csvRowLine}=__csv;\nconst {contentKey}=__hash;\n\nconst ERROR_LIST_LIMIT=1000;\nconst CHUNK_BYTES=1<<20;\n\n// Incremental tokenizer. push(text) may split anywhere, including inside \"\" escapes or CRLF.\nfunction createTokenizer(onRow){\n  let values=[],field='',quoted=false,closed=false,line=1,startLine=1,pendingQuote=false,pendingCR=false,bomLeft=2,started=false;\n  const pushField=()=>{values.push(field);field='';closed=false;};\n  const pushRow=()=>{pushField();onRow(values,startLine);values=[];startLine=line+1;};\n  return {\n    push(text){\n      if(!text)return;\n      let i=0;\n      if(!started){while(bomLeft&&text[i]==='﻿'){i++;bomLeft--;}if(i<text.length)started=true;else return;}\n      if(pendingCR){pendingCR=false;if(text[i]==='\\n')i++;}\n      if(pendingQuote){pendingQuote=false;if(text[i]==='\"'){field+='\"';i++;}else{quoted=false;closed=true;}}\n      for(;i<text.length;i++){\n        const ch=text[i];\n        if(quoted){\n          if(ch==='\"'){\n            if(i+1>=text.length){pendingQuote=true;}\n            else if(text[i+1]==='\"'){field+='\"';i++;}\n            else{quoted=false;closed=true;}\n          }else{field+=ch;if(ch==='\\n')line++;}\n        }else if(ch==='\"'){\n          if(field!==''||closed)throw new Error(`第${line}行引号位置错误`);\n          quoted=true;\n        }else if(ch===','){pushField();}\n        else if(ch==='\\n'||ch==='\\r'){\n          if(ch==='\\r'){if(i+1>=text.length)pendingCR=true;else if(text[i+1]==='\\n')i++;}\n          pushRow();line++;\n        }else{\n          if(closed)throw new Error(`第${line}行引号后有多余内容`);\n          field+=ch;\n        }\n      }\n    },\n    end(){\n      if(pendingQuote){pendingQuote=false;quoted=false;closed=true;}\n      if(quoted)throw new Error(`第${startLine}行引号未闭合`);\n      if(field!==''||values.length||closed){pushField();onRow(values,startLine);values=[];}\n    }\n  };\n}\n\n// Byte chunks of a File/Blob (stream or slice) or of a test object exposing arrayBuffer().\nasync function* readChunks(file){\n  if(typeof file.stream==='function'){const reader=file.stream().getReader();for(;;){const {done,value}=await reader.read();if(done)return;yield value;}}\n  if(typeof file.slice==='function'&&typeof file.size==='number'){for(let p=0;p<file.size;p+=CHUNK_BYTES)yield new Uint8Array(await file.slice(p,p+CHUNK_BYTES).arrayBuffer());return;}\n  const all=new Uint8Array(await file.arrayBuffer());for(let p=0;p<all.length;p+=CHUNK_BYTES)yield all.subarray(p,p+CHUNK_BYTES);\n}\n\n// Parses one file. Calls onHeader(headers,archiveHeaders) once, onRecord(values,source) per valid row.\n// Returns {encoding,errors,errorCount,rowCount}. Throws the same file-level errors as decodeCsv/parseCsv.\n// Like decodeCsv: UTF-8 first, then GB18030; a UTF-8 failure anywhere restarts the file as GB18030.\nasync function parseStream(file,{fileId,fileName,onHeader=()=>{},onRecord,onBytes=()=>{},onRestart=()=>{}}){\n  let lastError=null;\n  for(const encoding of ['utf-8','gb18030']){\n    // Like parseCsv, structural (quote) errors anywhere in the file take precedence over header errors,\n    // so a header problem is remembered while the rest of the file is still tokenized.\n    let headers=null,recordIndex=0,rowCount=0,errorCount=0,parseError=null,headerError=null;const errors=[];\n    const tokenizer=createTokenizer((values,startLine)=>{\n      if(headerError||!values.some(v=>v!==''))return;\n      if(!headers){\n        const archiveHeaders=values.slice();headers=archiveHeaders.map(h=>h.trim());\n        try{\n          if(headers.some(h=>!h)||new Set(headers).size!==headers.length)throw new Error('表头为空或有重复列名');\n          const missing=CORE_HEADERS.filter(h=>!headers.includes(h));\n          if(missing.length)throw new Error('缺少必需字段：'+missing.join('、'));\n          onHeader(headers,archiveHeaders);\n        }catch(e){headerError=e;}\n        return;\n      }\n      const source={fileId,fileName,recordIndex:++recordIndex,startLine};\n      if(values.length!==headers.length){errorCount++;if(errors.length<ERROR_LIST_LIMIT)errors.push({code:'row_width',message:`列数错误：需要${headers.length}列，实际${values.length}列`,sources:[source],recordId:null,finishDay:null,area:null,operator:null});return;}\n      rowCount++;onRecord(values,source,headers);\n    });\n    const decoder=new TextDecoder(encoding,{fatal:true});let failedDecode=false;\n    // Only decoder failures switch encoding; read errors propagate unchanged.\n    const decode=(chunk,stream)=>{try{return stream?decoder.decode(chunk,{stream:true}):decoder.decode();}catch(e){failedDecode=true;lastError=e;return null;}};\n    for await(const chunk of readChunks(file)){\n      const text=decode(chunk,true);if(failedDecode)break;\n      if(!parseError)try{tokenizer.push(text);}catch(e){parseError=e;}\n      onBytes(chunk.length);\n    }\n    if(!failedDecode){const tail=decode(null,false);if(!failedDecode&&!parseError)try{tokenizer.push(tail);tokenizer.end();}catch(e){parseError=e;}}\n    if(failedDecode){if(encoding==='gb18030')throw new Error('无法识别文件编码，请导出为 UTF-8 CSV');onRestart();continue;}\n    if(parseError)throw parseError;\n    if(!headers)throw new Error('文件为空');\n    if(headerError)throw headerError;\n    return {encoding,errors,errorCount,rowCount};\n  }\n  throw lastError;\n}\n\n// Per-file column plan: which columns to keep, and the sorted order used by recordKey(raw).\nfunction columnPlan(headers){\n  const sorted=headers.map((h,j)=>[h,j]).sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0);\n  return {\n    // Same text as recordKey(row object) without building and sorting an object per row.\n    key:values=>JSON.stringify(sorted.map(([h,j])=>[h,values[j]]))\n  };\n}\n\n// Values of non-statistics columns for chosen rows (Excel detail export), keyed \"fileId:recordIndex\".\nasync function collectFields(files,{fields,picks,onBytes}){\n  const out={};\n  for(const {file,fileId,fileName} of files){\n    const want=new Set(picks[fileId]||[]);if(!want.size)continue;let headers=null;\n    await parseStream(file,{fileId,fileName,onBytes,onHeader:h=>{headers=h;},onRestart:()=>{for(const k of Object.keys(out))if(k.startsWith(fileId+':'))delete out[k];},\n      onRecord:(values,source)=>{if(!want.has(source.recordIndex))return;const v={};for(const f of fields){const j=headers.indexOf(f);if(j>=0)v[f]=values[j];}out[fileId+':'+source.recordIndex]=v;}});\n  }\n  return out;\n}\n\n// Merged CSV of kept rows: picks[fileId] = {lines: sorted Uint32Array of recordIndex, hashHi, hashLo}.\n// Output order is file order, then row order. A changed file is reported instead of exported.\nasync function exportCsv(files,{headers,picks,onBytes}){\n  const encoder=new TextEncoder(),parts=[new Uint8Array([239,187,191]),encoder.encode(csvHeaderLine(headers))];\n  for(const {file,fileId,fileName} of files){\n    const want=picks[fileId];if(!want||!want.lines.length)continue;let next=0,plan=null,local=[],chunk='';\n    await parseStream(file,{fileId,fileName,onBytes,onRestart:()=>{next=0;local=[];chunk='';},onHeader:h=>{plan=columnPlan(h);},\n      onRecord:(values,source,fileHeaders)=>{\n        if(next>=want.lines.length||source.recordIndex!==want.lines[next])return;\n        const hex=contentKey(plan.key(values));\n        if(parseInt(hex.slice(0,8),16)!==want.hashHi[next]||parseInt(hex.slice(8,16),16)!==want.hashLo[next])throw new Error(fileName+' 内容已变化，请重新导入后再导出');\n        next++;const raw={};for(let j=0;j<fileHeaders.length;j++)raw[fileHeaders[j]]=values[j];\n        chunk+=csvRowLine(headers,raw);if(chunk.length>=65536){local.push(encoder.encode(chunk));chunk='';}\n      }});\n    if(next!==want.lines.length)throw new Error(fileName+' 内容已变化，请重新导入后再导出');\n    parts.push(...local);if(chunk)parts.push(encoder.encode(chunk));\n  }\n  return parts;\n}\n\nreturn {ERROR_LIST_LIMIT,CHUNK_BYTES,createTokenizer,readChunks,parseStream,columnPlan,collectFields,exportCsv};\n})();\nconst __compact=(()=>{\n// Compact import (runs in the background worker): each file is streamed once and reduced to\n// fixed-size numeric columns (about 60 bytes per kept row). Long text columns are never kept.\n// Rows completed today (Japan time) or later are excluded; rows with an unreadable completion\n// time or a wrong column count are skipped and counted.\nconst {parseStream,columnPlan,ERROR_LIST_LIMIT}=__stream;\nconst {assessRow,stampText,ROW_ISSUES}=__rules;\nconst {contentKey}=__hash;\nconst {WEIGHT_FIELD}=__weight;\n\nconst FLAG={opBlank:1<<13,weightMissing:1<<14};\nconst ISSUE_BIT=Object.fromEntries(ROW_ISSUES.map((c,i)=>[c,1<<i]));\nconst NO_PACKAGES=-1;\n\nclass Col{\n  constructor(T,n=4096){this.T=T;this.a=new T(n);this.n=0;}\n  push(v){if(this.n===this.a.length){const b=new this.T(this.a.length*2);b.set(this.a);this.a=b;}this.a[this.n++]=v;}\n  done(){return this.a.slice(0,this.n);}\n}\nconst CANONICAL_TASK=/^(?:0|[1-9]\\d{0,14})$/;\n\nasync function compactFile(file,{fileId,fileName,today,checkHeaders=()=>{},onBytes=()=>{}}){\n  let plan=null,headers=null,archiveHeaders=null,hasWeight=false;\n  const fresh=()=>({task:new Col(Float64Array),finish:new Col(Float64Array),accept:new Col(Float64Array),area:new Col(Uint16Array),op:new Col(Uint16Array),type:new Col(Uint16Array),\n    packages:new Col(Int32Array),weight:new Col(Float64Array),flags:new Col(Uint32Array),line:new Col(Uint32Array),recordIndex:new Col(Uint32Array),hashHi:new Col(Uint32Array),hashLo:new Col(Uint32Array)});\n  let c,dicts,extra,skippedFinish,todayCount,readRows;\n  const reset=()=>{c=fresh();dicts={area:new Map(),op:new Map(),type:new Map()};extra=new Map();skippedFinish={count:0,samples:[]};todayCount=0;readRows=0;};\n  reset();\n  const idOf=(map,v)=>{let i=map.get(v);if(i===undefined){i=map.size;if(i>65535)throw new Error('区域、人员或任务类型种类过多');map.set(v,i);}return i;};\n  const result=await parseStream(file,{fileId,fileName,onBytes,onRestart:reset,\n    onHeader:(h,a)=>{checkHeaders(h);headers=h;archiveHeaders=a;plan=columnPlan(h);hasWeight=h.includes(WEIGHT_FIELD);},\n    onRecord:(values,source)=>{\n      readRows++;\n      const raw={};for(let j=0;j<headers.length;j++)raw[headers[j]]=values[j];\n      const v=assessRow(raw);\n      if(v.finishDay===null){skippedFinish.count++;if(skippedFinish.samples.length<ERROR_LIST_LIMIT)skippedFinish.samples.push({source,rawValue:raw.完成时间});return;}\n      if(v.finishDay>=today){todayCount++;return;}\n      const i=c.finish.n,taskText=raw.任务编号,trimmed=taskText.trim(),hex=contentKey(plan.key(values));\n      const x={};\n      if(CANONICAL_TASK.test(taskText))c.task.push(Number(taskText));else{c.task.push(NaN);x.t=taskText;if(!trimmed)x.k='\\u0000'+hex;else if(CANONICAL_TASK.test(trimmed))x.n=Number(trimmed);}\n      c.finish.push(v.finishStamp);c.accept.push(v.acceptStamp===null?NaN:v.acceptStamp);\n      c.area.push(idOf(dicts.area,v.area));c.op.push(idOf(dicts.op,v.operator));c.type.push(idOf(dicts.type,v.type));\n      c.packages.push(v.packages===null?NO_PACKAGES:v.packages);c.weight.push(v.weightGrams===null?NaN:v.weightGrams);\n      let flags=0;for(const [code] of v.issues)flags|=ISSUE_BIT[code];\n      if(v.operatorBlank)flags|=FLAG.opBlank;if(v.weightReason==='操作后的包裹重量缺失')flags|=FLAG.weightMissing;\n      c.flags.push(flags);c.line.push(source.startLine);c.recordIndex.push(source.recordIndex);\n      c.hashHi.push(parseInt(hex.slice(0,8),16));c.hashLo.push(parseInt(hex.slice(8,16),16));\n      // Original text is kept only where it cannot be rebuilt from the numbers above.\n      if(raw.完成时间!==stampText(v.finishStamp))x.f=raw.完成时间;\n      if(raw.接单时间!==(v.acceptStamp===null?'':stampText(v.acceptStamp)))x.a=raw.接单时间;\n      if(raw.关联包裹数!==(v.packages===null?'':String(v.packages)))x.p=raw.关联包裹数;\n      if(hasWeight&&raw[WEIGHT_FIELD]!==(v.weightGrams===null?'':String(v.weightGrams)))x.w=raw[WEIGHT_FIELD];\n      if(flags&ISSUE_BIT.duration_mismatch)x.d=raw.任务耗时.trim();\n      if(v.operatorBlank&&raw.操作员!=='')x.o=raw.操作员;if(!raw.所属区域.trim()&&raw.所属区域!=='')x.ar=raw.所属区域;if(!raw.任务小类.trim()&&raw.任务小类!=='')x.ty=raw.任务小类;\n      for(const k in x){extra.set(i,x);break;}\n    }});\n  const dict=m=>[...m.keys()];\n  const cols=Object.fromEntries(Object.entries(c).map(([k,col])=>[k,col.done()]));\n  return {fileId,fileName,headers,archiveHeaders,hasWeight,encoding:result.encoding,rowCount:cols.finish.length,readRows,\n    errors:result.errors,errorCount:result.errorCount,skippedFinish,todayCount,\n    dicts:{area:dict(dicts.area),op:dict(dicts.op),type:dict(dicts.type)},cols,extra:[...extra]};\n}\n\nreturn {FLAG,ISSUE_BIT,NO_PACKAGES,compactFile};\n})();\nconst __engine=(()=>{\n// Import engine: runs the file work (compact parsing, CSV export, extra detail columns) in a\n// Web Worker when available, otherwise on the page itself. Both paths run the same code.\nconst {exportCsv,collectFields}=__stream;\nconst {compactFile}=__compact;\nconst {headerDifference}=__csv;\n\nfunction mismatchMessage(base,headers){\n  if(!base)return null;const {missing,added}=headerDifference(base,headers);\n  return missing.length||added.length?'列名与已导入数据不同，已拒绝导入'+(missing.length?'；缺少列：'+missing.join('、'):'')+(added.length?'；多出列：'+added.join('、'):''):null;\n}\nconst buffersOf=compact=>Object.values(compact.cols).map(a=>a.buffer);\n\n// Work shared by both paths; `post` delivers results and progress.\nconst operations={\n  // Each file → compact columns. A file whose columns differ from the first accepted file is rejected.\n  async compact({files,baseHeaders,today},post){\n    let base=baseHeaders||null;\n    for(const f of files){\n      try{\n        const out=await compactFile(f.file,{fileId:f.fileId,fileName:f.fileName,today,onBytes:n=>post({type:'bytes',n}),\n          checkHeaders:h=>{const message=mismatchMessage(base,h);if(message)throw new Error(message);}});\n        if(!base)base=out.headers;post({type:'file',compact:out},buffersOf(out));\n      }catch(e){post({type:'fileError',fileId:f.fileId,message:e.message});}\n    }\n  },\n  async exportCsv({files,headers,picks},post){const parts=await exportCsv(files,{headers,picks,onBytes:n=>post({type:'bytes',n})});post({type:'parts',parts},parts.map(p=>p.buffer));},\n  async fields({files,fields,picks},post){post({type:'fields',values:await collectFields(files,{fields,picks,onBytes:n=>post({type:'bytes',n})})});}\n};\n\nfunction createEngine({workerSource=null,createWorker}={}){\n  let worker=null,seq=0;const pending=new Map();\n  const ready=workerSource&&typeof Worker!=='undefined'&&typeof Blob!=='undefined'&&typeof URL!=='undefined'?new Promise(resolve=>{\n    try{\n      worker=(createWorker||(u=>new Worker(u)))(URL.createObjectURL(new Blob([workerSource],{type:'text/javascript'})));\n      const timer=setTimeout(()=>{worker=null;resolve(false);},3000);\n      worker.onmessage=e=>{const m=e.data;if(m.type==='pong'){clearTimeout(timer);resolve(true);return;}const p=pending.get(m.id);if(!p)return;\n        if(m.type==='done'){pending.delete(m.id);p.resolve();}else if(m.type==='error'){pending.delete(m.id);p.reject(new Error(m.message));}else p.onMessage(m);};\n      worker.onerror=()=>{clearTimeout(timer);worker=null;resolve(false);for(const p of pending.values())p.reject(new Error('后台读取线程出错，请刷新页面后重试'));pending.clear();};\n      worker.postMessage({op:'ping'});\n    }catch{worker=null;resolve(false);}\n  }):Promise.resolve(false);\n  async function run(op,args,onMessage){\n    if(await ready&&worker)return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject,onMessage});worker.postMessage({id,op,args});});\n    await operations[op](args,m=>onMessage(m));\n  }\n  const sizeOf=list=>list.reduce((n,f)=>n+(f.file?.size||0),0);\n  return {\n    get mode(){return worker?'worker':'page';},\n    ready,\n    // jobs: [{file,fileId,fileName}] → [{fileId, compact} | {fileId, error}] in input order.\n    async compactFiles(jobs,{baseHeaders,today,onProgress=()=>{}}={}){\n      const total=sizeOf(jobs),results=new Map();let bytes=0,doneFiles=0;\n      await run('compact',{files:jobs.map(j=>({file:j.file,fileId:j.fileId,fileName:j.fileName})),baseHeaders,today},m=>{\n        if(m.type==='bytes'){bytes+=m.n;onProgress({bytes,total,doneFiles,files:jobs.length});}\n        else if(m.type==='file'){doneFiles++;results.set(m.compact.fileId,{fileId:m.compact.fileId,compact:m.compact});onProgress({bytes,total,doneFiles,files:jobs.length});}\n        else if(m.type==='fileError'){doneFiles++;results.set(m.fileId,{fileId:m.fileId,error:m.message});}\n      });\n      return jobs.map(j=>results.get(j.fileId)||{fileId:j.fileId,error:'文件读取失败'});\n    },\n    async exportCsv(files,headers,picks,{onProgress=()=>{}}={}){\n      let parts=null,bytes=0;const list=files.filter(f=>picks[f.fileId]).map(f=>({file:f.blob,fileId:f.fileId,fileName:f.fileName})),total=sizeOf(list);\n      await run('exportCsv',{files:list,headers,picks},m=>{if(m.type==='bytes'){bytes+=m.n;onProgress({bytes,total});}else if(m.type==='parts')parts=m.parts;});\n      return parts;\n    },\n    // picks: {fileId: [recordIndex,…]} → lookup(fileId, recordIndex, field).\n    async fields(files,fields,picks,{onProgress=()=>{}}={}){\n      let values={},bytes=0;const list=files.filter(f=>picks[f.fileId]).map(f=>({file:f.blob,fileId:f.fileId,fileName:f.fileName})),total=sizeOf(list);\n      await run('fields',{files:list,fields,picks},m=>{if(m.type==='bytes'){bytes+=m.n;onProgress({bytes,total});}else if(m.type==='fields')values=m.values;});\n      return (fileId,recordIndex,k)=>values[fileId+':'+recordIndex]?.[k];\n    }\n  };\n}\n\nreturn {mismatchMessage,operations,createEngine};\n})();\n// Web Worker entry (bundled as text into the page). Runs engine operations and relays results.\nself.onmessage=async e=>{\n  const {id,op,args}=e.data||{};\n  if(op==='ping'){self.postMessage({type:'pong'});return;}\n  try{\n    // Column buffers and CSV chunks are handed over without copying.\n    await __engine.operations[op](args,(m,transfer=[])=>self.postMessage({id,...m},transfer));\n    self.postMessage({id,type:'done'});\n  }catch(err){self.postMessage({id,type:'error',message:err&&err.message||String(err)});}\n};\n";
 const __app=(()=>{
-const {decodeCsv,parseCsv,headerDifference}=__csv;
-const {buildDataset,stampText}=__data;
-const {selectRecords,selectDetailRecords,summarize,classifyMissingDays,reconcileFilters,scopedIssues,dateDays,areaFilters,personFilters,dailyAreaContributions,contributionText}=__stats;
-const {observeDays,overtimeText}=__attendance;
-const {makeExportSheets}=__export;
+const {stampText,japanDate,stampDay}=__rules;
+const {createEngine}=__engine;
+const {Ledger,runSync,runSliced,ISSUE_LIST_LIMIT}=__ledger;
+// Statistics come from the summary table (view.mjs); same functions and outputs as before.
+const {exportPicks,selectRecords,narrowSelection,selectDetailRecords,summarize,classifyMissingDays,dailyAreaContributions,observeDays,qualityIssues,makeExportSheets,buildRegionTrend}=__view;
+const {reconcileFilters,dateDays,areaFilters,personFilters,contributionText}=__stats;
+const {overtimeText}=__attendance;
 const {writeXlsx,countXmlControls}=__xlsx;
 const {filterPeople,sortRows,localDateRange,bucketPresentation,attendanceText,rankingValue}=__interactions;
-const {qualityIssues,issueCategory,qualityCounts}=__quality;
+const {issueCategory,qualityCounts}=__quality;
 const {formatKg}=__weight;
 const {createNameIndex,nameMatches}=__nameSearch;
-const {buildRegionTrend,regionColor,regionLabel,regionTooltip,groupedRegionChart}=__regionTrend;
-const {prepareRawArchive,rawArchiveParts,rawRecordKey}=__rawArchive;
-const {createProtection,confirmSource,fileIdentity,createIsolationMetadata,restoreIsolationMetadata}=__isolation;
+const {regionColor,regionLabel,regionTooltip,groupedRegionChart}=__regionTrend;
 
 const $=id=>document.getElementById(id);
 const nf=new Intl.NumberFormat('zh-CN');
 const fmt=n=>nf.format(n),esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const pageSize=50;
-const state={files:[],failed:[],dataset:buildDataset([]),filters:null,grainManual:false,pages:{},seq:0,importing:false};
-state.protectionStore=createProtection();state.metadata=[];
+// The ledger holds compact columns per file; state.dataset is the summary view built from it.
+const state={files:[],failed:[],ledger:new Ledger(),filters:null,grainManual:false,pages:{},seq:0,importing:false};
+state.dataset=runSync(state.ledger.buildSteps({today:japanDate()}));
 const ui={collapsed:false,peopleFilters:{},peopleSort:null,columns:[],people:[],menu:null,trend:{preset:'all'},trendSort:null,person:null,focusReturn:null};
 ui.peopleMode='total';
 ui.trendHidden=new Set();ui.regionTrend=null;
@@ -1009,13 +1594,16 @@ async function saveFile(blob,filename){
   setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 function notify(message,error=false){$('notice').hidden=!message;$('notice').textContent=message||'';$('notice').classList.toggle('error',error);}
-function table(key,headers,rows,identities=rows.map(r=>r.rowKey)){
+// Large tables pass lazyRows(): only the visible page is turned into cells.
+function lazyRows(list,makeRow,makeId){return {lazy:true,length:list.length,slice:(a,b)=>Array.from(list.slice(a,b),makeRow),idAt:i=>i<list.length?makeId(list[i]):undefined,hasId:v=>list.some(x=>makeId(x)===v)};}
+function table(key,headers,rows,identities){
+  const lazy=Boolean(rows.lazy),ids=lazy?null:identities??rows.map(r=>r.rowKey),idAt=lazy?rows.idAt:i=>ids[i],hasId=lazy?rows.hasId:v=>ids.includes(v);
   const size=key==='detail'?ui.detailSize:pageSize;
-  if(selectedRows.has(key)&&!identities.includes(selectedRows.get(key)))selectedRows.delete(key);
+  if(selectedRows.has(key)&&!hasId(selectedRows.get(key)))selectedRows.delete(key);
   const total=Math.max(1,Math.ceil(rows.length/size)),page=Math.max(0,Math.min(state.pages[key]||0,total-1));state.pages[key]=page;
   const head=headers.map(h=>typeof h==='object'?'<th class="'+(h.cls||'')+'">'+h.html+'</th>':'<th>'+esc(h)+'</th>').join('');
   const body=rows.length?rows.slice(page*size,(page+1)*size).map((cells,index)=>{
-    const id=identities[page*size+index],selectable=id!==undefined;
+    const id=idAt(page*size+index),selectable=id!==undefined;
     return '<tr class="'+(cells.rowClass||'')+(selectable?' data-row':'')+(selectable&&selectedRows.get(key)===id?' row-selected':'')+'"'+(selectable?' data-row-table="'+esc(key)+'" data-row-key="'+esc(id)+'"':'')+'>'+cells.map(cell=>typeof cell==='object'&&cell!==null?'<td class="'+(cell.cls||'')+'">'+cell.html+'</td>':'<td>'+textCell(cell)+'</td>').join('')+'</tr>';
   }).join(''):'<tr><td colspan="'+headers.length+'" class="empty-table">当前范围没有相应记录。</td></tr>';
   return '<div class="table-wrap"><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></div><div class="pager"><span>共'+fmt(rows.length)+'条 · 第'+(page+1)+'/'+total+'页</span><button data-page-prev="'+key+'" '+(page===0?'disabled':'')+'>上一页</button><button data-page-next="'+key+'" '+(page===total-1?'disabled':'')+'>下一页</button></div>';
@@ -1027,28 +1615,31 @@ function setImportCollapsed(value){
 function options(id,values,selected,allLabel){$(id).innerHTML=`<option value="">${allLabel}</option>`+values.map(v=>`<option value="${esc(v)}"${v===selected?' selected':''}>${esc(v)}</option>`).join('');}
 function operatorOptions(){
   const f=state.filters;if(!f)return;
-  const query=$('operator-search').value.trim(),values=[...new Set(state.dataset.records.map(r=>r.operator))].sort((a,b)=>a.localeCompare(b,'zh-CN'));
+  const query=$('operator-search').value.trim(),values=state.dataset.activeOperators.sort((a,b)=>a.localeCompare(b,'zh-CN'));
   options('operator',values.filter(v=>!query||v.includes(query)||v===f.operator),f.operator,'全部操作员');
 }
+// Every kept row has a valid completion date before today, so all of them are valid records.
+const validCount=d=>d.count;
 function fileRows(){
-  renderProtection();
   $('file-list').innerHTML=state.files.map(file=>{
-    const stamps=file.rows.map(r=>r.raw.完成时间?.slice(0,10)).filter(Boolean).sort();
-    return `<div class="file-row"><div><span class="file-name">${esc(file.fileName)}</span><span class="file-info">${fmt(file.rows.length)}条已读取${stamps.length?' · '+esc(stamps[0])+'～'+esc(stamps.at(-1)):''} · ${esc(file.encoding||'UTF-8')}</span></div><button class="quiet" data-remove-file="${esc(file.fileId)}" ${state.importing?'disabled':''}>移除</button></div>`;
+    // Earliest/latest completion day of the file's kept rows, computed once.
+    if(!file.finishSpan){let lo=Infinity,hi=-Infinity;for(const t of file.cols.finish){if(t<lo)lo=t;if(t>hi)hi=t;}file.finishSpan=file.rowCount?[stampDay(lo),stampDay(hi)]:[];}
+    const stamps=file.finishSpan;
+    return `<div class="file-row"><div><span class="file-name">${esc(file.fileName)}</span><span class="file-info">${fmt(file.readRows+file.errorCount)}条已读取${stamps.length?' · '+esc(stamps[0])+'～'+esc(stamps.at(-1)):''} · ${esc(file.encoding||'UTF-8')}</span></div><button class="quiet" data-remove-file="${esc(file.fileId)}" ${state.importing?'disabled':''}>移除</button></div>`;
   }).join('')+state.failed.map(f=>`<div class="file-row failed"><div><span class="file-name">${esc(f.name)}</span><span class="file-info">未导入：${esc(f.error)}</span></div><button class="quiet" data-remove-failed="${f.id}">移除提示</button></div>`).join('');
-  const raw=state.files.reduce((n,f)=>n+f.rows.length,0),d=state.dataset;
-  $('import-status').textContent=state.importing?'正在读取并检查文件…':state.files.length?`已导入${state.files.length}个文件 · 读取${fmt(raw)}条 · 有效作业记录${fmt(d.records.filter(r=>r.finishDay&&!r.isolated).length)}条${state.failed.length?' · '+state.failed.length+'个文件导入失败':''}`:state.failed.length?'文件导入失败，请查看上方原因。':'尚未导入文件。';
-  $('clear-files').disabled=state.importing||!state.files.length&&!state.failed.length&&!state.metadata.length;
+  const raw=state.files.reduce((n,f)=>n+f.readRows+f.errorCount,0),d=state.dataset;
+  $('import-status').textContent=state.importing?'正在读取并检查文件…':state.files.length?`已导入${state.files.length}个文件 · 读取${fmt(raw)}条 · 有效作业记录${fmt(validCount(d))}条${state.failed.length?' · '+state.failed.length+'个文件导入失败':''}`:state.failed.length?'文件导入失败，请查看上方原因。':'尚未导入文件。';
+  $('clear-files').disabled=state.importing||!state.files.length&&!state.failed.length;
   // 已有数据后：导入按钮变灰禁用，顶部改用“追加 CSV”
   const hasData=state.files.length>0,importHint=hasData?'已有数据，请使用“追加 CSV”补充新数据':'';
   $('import-button').disabled=state.importing||hasData;$('import-button').classList.toggle('primary',!hasData);
   $('import-button').title=importHint;$('import-wrap').title=importHint;
   $('append-top').hidden=!hasData;$('append-top').disabled=state.importing;
-  $('menu-clear-all').disabled=state.importing||!state.files.length&&!state.failed.length&&!state.metadata.length;
+  $('menu-clear-all').disabled=state.importing||!state.files.length&&!state.failed.length;
   $('export-button').disabled=state.importing||!state.filters;
   $('export-menu-button').disabled=state.importing||!state.files.length;
   $('menu-export-excel').disabled=!state.filters;
-  $('import-summary').textContent=state.importing?'正在读取并检查文件…':state.files.length?state.files.length+'个文件 · '+fmt(d.records.filter(r=>r.finishDay&&!r.isolated).length)+'条有效记录'+(d.range?' · '+(d.range||d.rawRange).start+' ～ '+(d.range||d.rawRange).end:'')+(state.failed.length?' · '+state.failed.length+'个文件未导入':''):'尚未导入文件';
+  $('import-summary').textContent=state.importing?'正在读取并检查文件…':state.files.length?state.files.length+'个文件 · '+fmt(validCount(d))+'条有效记录'+(d.range?' · '+(d.range||d.rawRange).start+' ～ '+(d.range||d.rawRange).end:'')+(state.failed.length?' · '+state.failed.length+'个文件未导入':''):'尚未导入文件';
 }
 function chart(buckets,metric,color,line=false){
   const W=720,H=220,left=54,right=14,top=16,bottom=40,plotW=W-left-right,plotH=H-top-bottom;
@@ -1112,8 +1703,10 @@ function issueEvidence(i,r){
   const record=i.recordId?'<p>任务编号：'+esc(i.task??r?.raw.任务编号??'未填写')+' · 任务类型：'+esc(i.type??r?.type??'未填写')+'<br>原始关联包裹数：'+esc((i.rawPackage??r?.raw.关联包裹数)||'空')+'<br>原始值：'+esc(i.rawValue??'—')+' · 统计值：'+esc(i.effectiveValue??'—')+'</p>':'';
   return '<details class="issue-evidence"><summary>查看详情'+(events.length?' · '+fmt(events.length)+'次间隔':'')+'</summary><div class="evidence-panel"><p>'+esc(i.message)+'</p>'+record+pairs+sourceDetails(i.allSources||i.sources,events.length?'当日完整来源（含未触发异常的任务）':'完整来源')+'</div></details>';
 }
+// Kept rows are rebuilt for display only when a table page needs them.
+const recordById=id=>id?state.dataset.record(Number(id.slice(1))):null;
 function issueRows(issues){return issues.map(i=>{
-  const r=state.dataset.records.find(r=>r.id===i.recordId);
+  const r=recordById(i.recordId);
   const events=i.gapEvents||[],summary=events.length?'出勤待核实 · '+fmt(events.length)+'次接单间隔超过120分钟'+(i.reasonCodes?.length>1?'；另有待核实原因':''):i.code==='attendance_pending'?'出勤证据或时间数据待核实':i.message;
   return [i.category||issueCategory(i.code),i.finishDay||'当前范围 / 未归属日期',i.operator||'—',i.area||'—',events.length?numberCell(events.length):'—',{html:'<span class="issue-summary" title="'+esc(summary)+'">'+esc(summary)+'</span>',cls:'issue-summary-cell'},{html:issueEvidence(i,r),cls:'issue-evidence-cell'}];
 });}
@@ -1169,7 +1762,7 @@ function renderTrend(records){
   const range=localDateRange(d.range||d.rawRange,f,ui.trend);
   $('trend-range').textContent=range?range.start+' ～ '+range.end+' · '+({day:'按日',week:'按周',month:'按月'}[f.grain]):'与主看板当前日期无重叠';
   if(!range){selectedRows.delete('trend');$('trend-table').innerHTML='<p class="empty-table">所选表内日期与主看板日期没有重叠，请调整表内范围。</p>';return;}
-  const s=summarize(records.filter(r=>r.finishDay>=range.start&&r.finishDay<=range.end),{...f,...range});
+  const s=summarize(narrowSelection(records,range),{...f,...range});
   const columns=[{key:'start',label:f.grain==='month'?'月份':'日期',type:'text',value:b=>b.start},
     ...[['orders','完成单量'],['packagesKnown','关联包裹数']].map(([key,label])=>({key,label,type:'number',value:b=>b[key]}))];
   const header=c=>({cls:c.type==='number'?'number':'',html:'<button class="sort-header '+(ui.trendSort?.key===c.key?'active':'')+'" data-trend-sort="'+c.key+'" aria-label="'+c.label+'排序" title="单击循环：降序 → 升序 → 默认">'+c.label+sortIcon(c.key,ui.trendSort)+'</button>'});
@@ -1240,121 +1833,150 @@ function renderMenuValues(){
   $('menu-values').innerHTML=visible.length?visible.map(({v,i})=>'<label><input type="checkbox" data-menu-value="'+i+'" '+(m.selected.has(v)?'checked':'')+'>'+esc(v)+'</label>').join(''):'<p class="small muted">未找到匹配的操作员</p>';
   $('menu-count').textContent='已选择 '+m.values.filter(v=>m.selected.has(v)).length+' / '+m.values.length+(m.key==='name'?' 人':' 个区域');
 }
+// Notes under the date range: excluded today rows, de-duplication and skipped rows (counts only, no statistics change).
+function dataNotes(d){
+  let text='';
+  if(d.todayExcluded)text+=` · 已排除今日未完成数据 ${fmt(d.todayExcluded)} 条`;
+  if(d.dup.dropped)text+=` · 去重 ${fmt(d.dup.dropped)} 条，其中内容不同 ${fmt(d.dup.differing)} 条`;
+  const skipped=d.skipped.width+d.skipped.finish;
+  if(skipped)text+=` · ⚠ 跳过 ${fmt(skipped)} 行（`+[d.skipped.width?`列数不对 ${fmt(d.skipped.width)} 行`:'',d.skipped.finish?`完成时间无法识别 ${fmt(d.skipped.finish)} 行`:''].filter(Boolean).join('，')+'），未计入统计，详见数据检查';
+  // A file exported up to today makes yesterday complete; otherwise the last day may have been exported half-way.
+  const last=d.maxFinishStamp;
+  if(!d.todayExcluded&&last!==null&&last%86400000<68400000)text+=` · ⚠ 最后一天 ${stampDay(last)} 的最后完成时间仅到 ${stampText(last).slice(11,16)}，可能只导出了半天，当天数字仅供参考`;
+  return text;
+}
 function render(){
   fileRows();const f=state.filters,d=state.dataset;
   $('empty').hidden=Boolean(f);$('dashboard').hidden=!f;
   if(!f){
     closePerson();closeMenu();
-    $('empty').innerHTML=d.issues.length?'<h2>数据检查：暂无可按日期统计的数据</h2><p class="muted">请核对完成时间；原始文件和异常信息仍保留。</p>'+table('invalid',issueHeaders,issueRows(d.issues),d.issues.map(issueKey)):emptyMarkup;return;
+    const today=d.todayExcluded?'<p class="muted">已排除今日（日本时间）未完成数据 '+fmt(d.todayExcluded)+' 条，这些记录不计入统计。</p>':'';
+    $('empty').innerHTML=d.issues.length?'<h2>数据检查：暂无可按日期统计的数据</h2><p class="muted">请核对完成时间；原始文件和异常信息仍保留。</p>'+today+table('invalid',issueHeaders,lazyRows(d.issues,i=>issueRows([i])[0],issueKey)):today?'<h2>暂无可统计的数据</h2>'+today:emptyMarkup;return;
   }
   for(const id of ['start-date','end-date']){$(id).min=(d.range||d.rawRange).start;$(id).max=(d.range||d.rawRange).end;}
   $('start-date').value=f.start;$('end-date').value=f.end;$('grain').value=f.grain;
-  options('area',[...new Set(d.records.map(r=>r.area))].sort((a,b)=>a.localeCompare(b,'zh-CN')),f.area,'全部区域');operatorOptions();
-  $('data-range').textContent=(d.range?`正式数据范围：${d.range.start} ～ ${d.range.end}`:'当前无正式统计记录，仅供隔离记录追溯')+` · ${state.files.length}个文件`+(d.isolatedCount?' · '+fmt(d.isolatedCount)+'条当前日期记录已隔离，不参与正式统计':'');
-  // 仅追加提醒文字，不改变任何统计数字
-  const lastStamp=d.records.reduce((m,r)=>!r.isolated&&r.finishStamp!==null&&r.finishStamp>m?r.finishStamp:m,-Infinity);
-  const conflictIds=new Set(d.issues.filter(i=>i.code==='task_conflict').map(i=>i.recordId));
-  const conflictTasks=new Set(d.records.filter(r=>conflictIds.has(r.id)).map(r=>r.raw.任务编号)).size;
-  if(Number.isFinite(lastStamp)&&lastStamp%86400000<68400000)$('data-range').textContent+=` · ⚠ 最后一天 ${d.range.end} 的最后完成时间仅到 ${stampText(lastStamp).slice(11,16)}，可能只导出了半天，当天数字仅供参考`;
-  if(conflictTasks)$('data-range').textContent+=` · ⚠ ${conflictTasks}个任务编号出现不同内容的记录，已分别计数，可能重复，请查看数据检查`;
+  options('area',d.activeAreas.sort((a,b)=>a.localeCompare(b,'zh-CN')),f.area,'全部区域');operatorOptions();
+  $('data-range').textContent=`数据范围：${d.range.start} ～ ${d.range.end} · ${state.files.length}个文件`+dataNotes(d);
   const scope='区域分析：'+(f.area?f.area+'区':'全部区域')+' · 人员分析：'+(f.operator||'全部操作员');
-  $('current-range').textContent=`当前查看：${f.start} ～ ${f.end} · ${scope}`;$('trend-scope').textContent=f.start+' ～ '+f.end+' · '+({day:'按日',week:'按周',month:'按月'}[f.grain])+' · '+(f.area?regionLabel(f.area):'全部区域')+' · 全部操作员';
+  $('current-range').textContent=`当前查看：${f.start} ～ ${f.end} · ${scope}`;
+  // Operator statistics always span all areas, so with an area selected the two totals differ on purpose.
+  $('people-area-note').hidden=!f.area;$('people-area-note').textContent=f.area?`已选择区域 ${f.area}：区域概况只统计该区域；操作员统计按人员跨全部已导入区域合计，因此两处合计可能不同。未选择区域时两者相等。`:'';$('trend-scope').textContent=f.start+' ～ '+f.end+' · '+({day:'按日',week:'按周',month:'按月'}[f.grain])+' · '+(f.area?regionLabel(f.area):'全部区域')+' · 全部操作员';
   const records=selectRecords(d,areaFilters(f)),s=summarize(records,areaFilters(f)),personSummary=summarize(selectRecords(d,personFilters(f)),personFilters(f)),days=dateDays(f.start,f.end).length;
   $('orders-value').textContent=fmt(s.orders);$('packages-value').textContent=fmt(s.packagesKnown);$('days-value').textContent=fmt(s.recordDays);
   $('packages-note').textContent='单箱增值关联包裹数至少计1';
   $('coverage').textContent=`${days}个自然日 · ${s.recordDays}个有记录日 · ${days-s.recordDays}个无记录日`;
   $('operators-value').textContent=fmt(summarize(selectRecords(d,{...personFilters(f),operator:null}),f).byOperator.filter(r=>r.name!=='未识别操作员').length);
   $('operators-note').textContent='当前日期 · 全部已导入区域，不含姓名缺失记录';
-  ui.regionTrend=buildRegionTrend(records,areaFilters(f),[...new Set(d.records.filter(r=>!r.isolated&&r.finishDay).map(r=>r.area))]);
+  ui.regionTrend=buildRegionTrend(records,areaFilters(f),d.activeAreas);
   renderRegionChart();
   renderTrend(records);
   const types=s.byType.map(t=>t.name),headers=['区域',...['完成单量','关联包裹数','有记录日',...types.map(t=>t+'单量')].map(label=>({html:esc(label),cls:'number'}))];
   const groupRows=list=>list.map(r=>[r.name,numberCell(r.orders),numberCell(r.packagesKnown),numberCell(r.recordDays),...types.map(t=>numberCell(r.types[t]||0))]);
   $('area-table').innerHTML=table('area',headers,groupRows(s.byArea),s.byArea.map(r=>rowKey(r.name)));renderPeople(personSummary);renderPerson();
   const observations=observeDays(d,f);
-  $('attendance-table').innerHTML=table('attendance',['日期','操作员','区域','首次接单记录','最后完成记录','作业记录跨度','出勤状态'],observations.map(o=>[o.day,o.operator,o.area,o.firstAccept||'—',o.lastFinish||'—',o.spanSeconds===null?'—':`${Math.floor(o.spanSeconds/3600)}小时${Math.floor(o.spanSeconds%3600/60)}分`,{html:esc(o.status)+(overtimeText(o)?'<span class="small muted overtime-note">'+esc(overtimeText(o))+'</span>':'')}]),observations.map(o=>rowKey(o.day,o.operator,o.area)));
+  $('attendance-table').innerHTML=table('attendance',['日期','操作员','区域','首次接单记录','最后完成记录','作业记录跨度','出勤状态'],lazyRows(observations,o=>[o.day,o.operator,o.area,o.firstAccept||'—',o.lastFinish||'—',o.spanSeconds===null?'—':`${Math.floor(o.spanSeconds/3600)}小时${Math.floor(o.spanSeconds%3600/60)}分`,{html:esc(o.status)+(overtimeText(o)?'<span class="small muted overtime-note">'+esc(overtimeText(o))+'</span>':'')}],o=>rowKey(o.day,o.operator,o.area)));
   const issues=qualityIssues(d,f),counts=qualityCounts(issues);
   const allIssues=qualityIssues(d,{...f,start:(d.range||d.rawRange).start,end:(d.range||d.rawRange).end,area:null,operator:null});
   $('check-count').textContent=`（当前范围${fmt(issues.length)}项 · 全部${fmt(allIssues.length)}项）`;
   $('check-summary').textContent=`原始记录级提示：${fmt(counts.recordHints)}项 · 涉及唯一原始记录：${fmt(counts.uniqueRecords)}条 · 待核实人员日期：${fmt(counts.pendingPersonDays)}组 · 独立异常接单间隔：${fmt(counts.gapEvents)}次${counts.otherHints?' · 其他汇总提示：'+fmt(counts.otherHints)+'项':''}。原始提示按日期、区域及操作员追溯；出勤按日期和人员、跨全部已导入区域汇总，间隔次数单独计算。`;
-  $('missing-global').innerHTML=missingText(classifyMissingDays(d.records,f.start,f.end));$('missing-local').innerHTML=missingText(classifyMissingDays(records,f.start,f.end));
+  $('missing-global').innerHTML=missingText(classifyMissingDays(d,f.start,f.end));$('missing-local').innerHTML=missingText(classifyMissingDays(records,f.start,f.end));
   const categories=['重复记录','关联包裹数异常','处理重量异常','操作员异常','时间字段异常','作业构成不一致','其他数据质量问题'];
   $('quality-summary').innerHTML=categories.map(category=>{
     const list=issues.filter(i=>i.category===category&&i.code!=='attendance_pending'),count=list.length;
     return '<span class="'+(count?'warning':'badge')+'">'+esc(category)+'：'+fmt(count)+'项</span>';
   }).join('');
-  $('issues-table').innerHTML=table('issues',issueHeaders,issueRows(issues),issues.map(issueKey));
+  if(d.issuesTruncated){const parts=Object.entries(d.issueTotals).filter(([,n])=>n>ISSUE_LIST_LIMIT).map(([code,n])=>issueCategory(code)+'（'+code+'）共'+fmt(n)+'条');$('check-summary').textContent+=` 注意：以下类型异常较多，每类只列出前${fmt(ISSUE_LIST_LIMIT)}条，上面的项数也只按已列出的计算：${parts.join('；')}。统计数字不受影响。`;}
+  $('issues-table').innerHTML=table('issues',issueHeaders,lazyRows(issues,i=>issueRows([i])[0],issueKey));
   ui.detailRecords=selectDetailRecords(d,f);renderDetail();
 }
 function renderDetail(){
-  const query=ui.detailQuery.trim(),records=ui.detailRecords.filter(r=>!query||String(r.raw.任务编号??'').includes(query));
+  // ui.detailRecords holds kept-row positions; rows are rebuilt only for the visible page.
+  const d=state.dataset,query=ui.detailQuery.trim(),records=query?ui.detailRecords.filter(s=>d.taskText(s).includes(query)):ui.detailRecords;
   $('detail-count').textContent=' · '+fmt(ui.detailRecords.length)+'条记录';
   $('detail-results').textContent=query?(records.length?'找到'+fmt(records.length)+'条匹配记录':'未找到匹配的任务编号'):'共'+fmt(records.length)+'条记录';
   $('detail-clear').disabled=!$('detail-search').value;
   $('detail-size').value=String(ui.detailSize);
-  $('detail-table').innerHTML=table('detail',['任务编号','任务小类','区域','操作员','接单时间','完成时间','原始关联包裹数','统计关联包裹数','来源'],records.map(r=>[r.raw.任务编号,r.isolated?{html:esc(r.type)+'<span class="small muted overtime-note">已隔离，不参与正式统计</span>'}:r.type,r.area,r.operator,r.raw.接单时间,r.raw.完成时间,r.raw.关联包裹数,r.packages===null?'未知':numberCell(r.packages),longCell(r.sources.map(s=>`${s.fileName} 第${s.startLine}行`).join('；'))]),records.map(r=>rowKey(r.id)));
+  $('detail-table').innerHTML=table('detail',['任务编号','任务小类','区域','操作员','接单时间','完成时间','原始关联包裹数','统计关联包裹数','来源'],lazyRows(records,slot=>{const r=d.record(slot);return [r.raw.任务编号,r.type,r.area,r.operator,r.raw.接单时间,r.raw.完成时间,r.raw.关联包裹数,r.packages===null?'未知':numberCell(r.packages),longCell(r.sources.map(s=>`${s.fileName} 第${s.startLine}行`).join('；'))];},slot=>rowKey('r'+slot)));
   if(query&&!records.length)$('detail-table').innerHTML=$('detail-table').innerHTML.replace('当前范围没有相应记录。','未找到匹配的任务编号');
 }
-function restoreMetadata(){
-  for(const m of state.metadata){const targets=state.files.filter(f=>fileIdentity(f)===m.value?.archiveId);m.error=targets.length?'':'尚未找到内容匹配的 CSV，保护状态未恢复';
-    for(const target of targets)try{restoreIsolationMetadata(target,m.value,state.protectionStore);m.error='';}catch(e){m.error=e.message;}
-  }
+// Datasets up to SYNC_ROWS kept rows are summarised at once; larger ones in slices so the page stays responsive.
+const SYNC_ROWS=30000;
+const engine=createEngine({workerSource:typeof __WORKER_SOURCE!=='undefined'?__WORKER_SOURCE:null});
+function showProgress(label,ratio,detail=''){
+  const box=$('import-progress');if(label===null){box.hidden=true;return;}
+  box.hidden=false;const pct=Math.max(0,Math.min(100,Math.round(ratio*100)));
+  $('import-progress-fill').style.width=pct+'%';$('import-progress-text').textContent=label+' · '+pct+'%'+(detail?' · '+detail:'');
 }
-function renderProtection(){
-  $('verify-ack').checked=false;
-  const d=state.dataset,pending=d.records.filter(r=>r.isolated&&!r.excludedFromAttendance),protectedRows=d.records.filter(r=>r.protection);
-  $('protection-panel').hidden=!protectedRows.length&&!state.metadata.length;
-  $('protection-status').textContent='未核实记录：'+fmt(pending.length)+'条；已排除旧内容：'+fmt(d.records.filter(r=>r.excludedFromAttendance).length)+'条。'+state.metadata.map(m=>m.name+'：'+(m.error||'已校验恢复')).join('；');
-  const groups=[];for(const file of state.files){const pairs=new Map();for(const r of d.records)if(r.finishDay&&r.sources.some(s=>s.fileId===file.fileId)&&r.protection)pairs.set(JSON.stringify([r.finishDay,r.area]),{fileId:file.fileId,day:r.finishDay,area:r.area});for(const g of pairs.values())groups.push(g);}
-  ui.protectionGroups=groups;$('verify-scope').innerHTML=groups.map((g,i)=>{const rows=d.records.filter(r=>r.finishDay===g.day&&r.area===g.area&&r.sources.some(s=>s.fileId===g.fileId));return '<option value="'+i+'">'+esc(g.day+' · '+g.area+' · '+state.files.find(f=>f.fileId===g.fileId).fileName+' · '+rows.length+'条')+'</option>';}).join('');
-  $('verify-source').disabled=!groups.length||state.importing;
-}
-$('verify-scope').addEventListener('change',()=>{$('verify-ack').checked=false;$('verify-note').value='';});
-$('verify-source').addEventListener('click',()=>{try{const scope=ui.protectionGroups[Number($('verify-scope').value)];if(!scope)throw new Error('请选择需要核实的来源');confirmSource(state.dataset,{...scope,acknowledged:$('verify-ack').checked,note:$('verify-note').value});$('verify-ack').checked=false;rebuild();notify('指定来源、日期和区域已人工核实，正式统计已重新计算。');}catch(e){notify(e.message,true);}});
-function rebuild(){
+function rebuildPrepare(){
   selectedRows.clear();
   if(!state.files.length){clearTimeout(detailTimer);ui.detailQuery='';ui.detailRecords=[];$('detail-search').value='';$('detail-details').open=false;}
-  const old=state.filters,oldRange=state.dataset.range,full=Boolean(old&&oldRange&&old.start===oldRange.start&&old.end===oldRange.end);
-  restoreMetadata();state.dataset=buildDataset(state.files,{protectionStore:state.protectionStore});const result=reconcileFilters(state.dataset,old,full,state.grainManual);state.filters=result.filters;state.pages={};
+  const old=state.filters,oldRange=state.dataset.range;return {old,full:Boolean(old&&oldRange&&old.start===oldRange.start&&old.end===oldRange.end)};
+}
+function rebuildFinish({old,full}){
+  const result=reconcileFilters(state.dataset,old,full,state.grainManual);state.filters=result.filters;state.pages={};
   if(!state.files.length)setImportCollapsed(false);
   if(result.notice)notify(result.notice);render();
+}
+const PHASES={dedup:['正在按任务编号去重',0,0.3],summary:['正在汇总',0.3,0.5],issues:['正在整理数据检查',0.5,0.6],attendance:['正在推定出勤',0.6,1]};
+// Re-summarises all imported files (de-duplication, summary table, issues, attendance).
+function rebuild(){
+  const prep=rebuildPrepare(),steps=state.ledger.buildSteps({today:japanDate()});
+  if(state.ledger.rowCount<=SYNC_ROWS){state.dataset=runSync(steps);rebuildFinish(prep);return Promise.resolve();}
+  return (async()=>{
+    const wasImporting=state.importing;state.importing=true;fileRows();
+    try{state.dataset=await runSliced(steps,{onProgress:p=>{const [label,lo,hi]=PHASES[p.phase];showProgress(label,lo+(hi-lo)*(p.total?p.done/p.total:0),fmt(Math.min(p.done,p.total))+' / '+fmt(p.total)+' 条');}});
+      showProgress('正在生成图表',1);await new Promise(r=>setTimeout(r,0));}
+    finally{state.importing=wasImporting;}
+    rebuildFinish(prep);showProgress(null);
+  })();
 }
 async function importFiles(files){
   if(state.importing||!files.length)return;
   const firstBatch=!state.dataset.range;
   state.importing=true;notify('');fileRows();await new Promise(resolve=>requestAnimationFrame(resolve));
+  // Outcomes are applied in the order the files were chosen.
+  const outcomes=[],jobs=[];
   for(const f of files){
     const id='f'+(++state.seq);
-    try{
-      if(/\.json$/i.test(f.name)){state.metadata.push({name:f.name,value:JSON.parse(new TextDecoder().decode(await f.arrayBuffer()))});continue;}
-      if(!/\.csv$/i.test(f.name))throw new Error('请选择 CSV 文件');
-      const decoded=decodeCsv(new Uint8Array(await f.arrayBuffer()));const parsed=parseCsv(decoded.text,id,f.name);parsed.encoding=decoded.encoding;
-      // 以第一个成功导入的文件为准；列名集合不同则拒绝，不静默合并
-      const base=state.files[0]?.headers;
-      if(base){const {missing,added}=headerDifference(base,parsed.headers);if(missing.length||added.length)throw new Error('列名与已导入数据不同，已拒绝导入'+(missing.length?'；缺少列：'+missing.join('、'):'')+(added.length?'；多出列：'+added.join('、'):''));}
-      state.files.push(parsed);
-    }catch(e){state.failed.push({id,name:f.name,error:e.message});}
+    if(!/\.csv$/i.test(f.name)){outcomes.push({failed:{id,name:f.name,error:'请选择 CSV 文件'}});continue;}
+    const job={file:f,fileId:id,fileName:f.name};jobs.push(job);outcomes.push({job});
   }
-  state.importing=false;$('csv-files').value='';rebuild();
+  const today=japanDate(),before={today:state.dataset.todayExcluded,dropped:state.dataset.dup.dropped,differing:state.dataset.dup.differing};let skipped=0,todayRows=0;
+  if(jobs.length){
+    // Files are read in chunks (in a background worker when available) and reduced to compact columns;
+    // today's rows are excluded and a file whose columns differ from the first accepted file is rejected.
+    showProgress('正在读取文件',0);
+    const results=await engine.compactFiles(jobs,{baseHeaders:state.files[0]?.headers,today,onProgress:p=>showProgress('正在读取文件',p.total?p.bytes/p.total:0,`第${Math.min(p.doneFiles+1,p.files)}/${p.files}个文件`)});
+    const byId=new Map(results.map(r=>[r.fileId,r]));
+    for(const o of outcomes)if(o.job){const r=byId.get(o.job.fileId);if(r.error)o.failed={id:o.job.fileId,name:o.job.fileName,error:r.error};else{o.file=state.ledger.addFile(r.compact,{mtime:o.job.file.lastModified||0,blob:o.job.file});skipped+=r.compact.errorCount+r.compact.skippedFinish.count;todayRows+=r.compact.todayCount;}}
+  }
+  for(const o of outcomes){if(o.failed)state.failed.push(o.failed);if(o.file)state.files.push(o.file);}
+  state.importing=false;$('csv-files').value='';
+  try{await rebuild();}finally{showProgress(null);}
   if(state.files.length&&!state.failed.length)setImportCollapsed(true);
   if(firstBatch&&state.dataset.range)$('detail-details').open=false;
   if(state.failed.length)setImportCollapsed(false);
-  if(state.metadata.some(m=>m.error))setImportCollapsed(false);
-  if(state.failed.length)notify('部分文件未导入，原因已显示在文件列表中。其他合格文件已参与统计。',true);
+  // Import summary: today's rows excluded, duplicates removed, rows skipped.
+  const d=state.dataset,notes=[];
+  if(todayRows)notes.push(`已排除今日未完成数据 ${fmt(todayRows)} 条`);
+  const dropped=d.dup.dropped-before.dropped,differing=d.dup.differing-before.differing;
+  if(dropped>0)notes.push(`去重 ${fmt(dropped)} 条，其中内容不同 ${fmt(Math.max(0,differing))} 条`);
+  if(skipped)notes.push(`跳过 ${fmt(skipped)} 行格式错误或完成时间无法识别的数据，未计入统计；数据检查中列出前${fmt(ISSUE_LIST_LIMIT)}条的位置`);
+  if(state.failed.length)notify('部分文件未导入，原因已显示在文件列表中。其他合格文件已参与统计。'+(notes.length?'\n'+notes.join('；')+'。':''),true);
+  else if(notes.length)notify(notes.join('；')+'。',Boolean(skipped));
 }
 $('import-button').addEventListener('click',()=>$('csv-files').click());
-$('import-metadata').addEventListener('click',()=>$('csv-files').click());
 $('import-toggle').addEventListener('click',()=>setImportCollapsed(!ui.collapsed));
 $('csv-files').addEventListener('change',e=>importFiles([...e.target.files]));
 // 已有数据时禁止拖入，与“导入 CSV”按钮禁用保持一致
 $('drop-zone').addEventListener('dragover',e=>{e.preventDefault();if(!state.files.length)$('drop-zone').classList.add('dragover');});
 $('drop-zone').addEventListener('dragleave',()=>$('drop-zone').classList.remove('dragover'));
 $('drop-zone').addEventListener('drop',e=>{e.preventDefault();$('drop-zone').classList.remove('dragover');if(state.files.length){notify('已有数据，请使用“追加 CSV”',true);return;}importFiles([...e.dataTransfer.files]);});
-function clearAll(){state.files=[];state.failed=[];state.protectionStore=createProtection();state.metadata=[];state.filters=null;state.grainManual=false;ui.peopleFilters={};ui.peopleSort=null;ui.trend={preset:'all'};ui.trendHidden.clear();$('trend-tooltip').hidden=true;$('trend-preset').value='all';$('trend-error').textContent='';$('operator-search').value='';notify('');rebuild();}
+function clearAll(){state.files=[];state.failed=[];state.ledger.clear();state.filters=null;state.grainManual=false;ui.peopleFilters={};ui.peopleSort=null;ui.trend={preset:'all'};ui.trendHidden.clear();$('trend-tooltip').hidden=true;$('trend-preset').value='all';$('trend-error').textContent='';$('operator-search').value='';notify('');rebuild();}
 // 清空前必须确认；reimport=true 时清空后直接打开文件选择
 function openClear(reimport){
-  ui.clearReimport=reimport;const raw=state.files.reduce((n,f)=>n+f.rows.length,0);
-  $('clear-summary').textContent=`将删除当前页面中已导入的全部数据：${state.files.length}个文件、${fmt(raw)}条读取记录`+(state.failed.length?`、${state.failed.length}条导入失败提示`:'')+(state.metadata.length?`、${state.metadata.length}个配套 JSON`:'')+'，以及人工核实状态。此操作不能撤销。';
+  ui.clearReimport=reimport;const raw=state.files.reduce((n,f)=>n+f.readRows+f.errorCount,0);
+  $('clear-summary').textContent=`将删除当前页面中已导入的全部数据：${state.files.length}个文件、${fmt(raw)}条读取记录`+(state.failed.length?`、${state.failed.length}条导入失败提示`:'')+'。此操作不能撤销。';
   $('clear-dialog').showModal();
 }
 $('clear-files').addEventListener('click',()=>openClear(false));
@@ -1364,7 +1986,7 @@ $('clear-confirm').addEventListener('click',()=>{const reimport=ui.clearReimport
 $('append-top').addEventListener('click',()=>$('csv-files').click());
 
 $('apply-dates').addEventListener('click',()=>{
-  try{const start=$('start-date').value,end=$('end-date').value;dateDays(start,end);if(start<(state.dataset.range||state.dataset.rawRange).start||end>(state.dataset.range||state.dataset.rawRange).end)throw new Error('请选择全部数据范围内的日期');
+  try{const start=$('start-date').value,end=$('end-date').value;dateDays(start,end);const range=state.dataset.range||state.dataset.rawRange;if(end>range.end&&state.dataset.today&&end>=state.dataset.today)throw new Error('今日（日本时间）数据尚未完成，不参与统计；结束日期最晚可选 '+range.end);if(start<range.start||end>range.end)throw new Error('请选择全部数据范围内的日期');
     state.filters={...state.filters,start,end};state.filters=reconcileFilters(state.dataset,state.filters,false,state.grainManual).filters;state.pages={};notify('');render();
   }catch(e){notify(e.message,true);}
 });
@@ -1390,7 +2012,7 @@ document.addEventListener('click',e=>{
   if(button.dataset.pageNext==='detail'||button.dataset.pagePrev==='detail'){
     const step=button.dataset.pageNext==='detail'?1:-1;state.pages.detail=Math.max(0,(state.pages.detail||0)+step);renderDetail();return;
   }
-  if(button.dataset.removeFile){state.files=state.files.filter(f=>f.fileId!==button.dataset.removeFile);notify('');rebuild();}
+  if(button.dataset.removeFile){state.ledger.removeFile(button.dataset.removeFile);state.files=state.files.filter(f=>f.fileId!==button.dataset.removeFile);notify('');rebuild();}
   if(button.dataset.removeFailed){state.failed=state.failed.filter(f=>f.id!==button.dataset.removeFailed);render();}
   if(button.dataset.pageNext){const key=button.dataset.pageNext;state.pages[key]=(state.pages[key]||0)+1;render();}
   if(button.dataset.pagePrev){const key=button.dataset.pagePrev;state.pages[key]=Math.max(0,(state.pages[key]||0)-1);render();}
@@ -1475,7 +2097,15 @@ $('download-excel').addEventListener('click',async()=>{
   await new Promise(resolve=>requestAnimationFrame(resolve));
   try{
     const sections=[...document.querySelectorAll('[name=export-section]:checked')].map(e=>e.value),detailFields=[...document.querySelectorAll('[name=export-field]:checked')].map(e=>e.value);
-    const sheets=makeExportSheets(state.dataset,state.filters,{sections,detailFields,includeWeight:$('export-weight').checked}),controls=countXmlControls(sheets);
+    // Columns not kept in memory (e.g. 购买服务) are read again from the chosen files for the exported rows only.
+    let extraValue;const d=state.dataset,kept=new Set(['任务编号','任务小类','关联包裹数','所属区域','操作员','接单时间','完成时间','操作后的包裹重量(g)','处理重量（kg）']);
+    const extra=sections.includes('detail')?detailFields.filter(k=>!kept.has(k)):[];
+    if(extra.length&&d.count){
+      $('export-error').textContent='正在读取原始文件中的明细字段…';const picks={};
+      for(const slot of selectDetailRecords(d,state.filters)){const f=d.files[d.WF[slot]];(picks[f.fileId]||(picks[f.fileId]=[])).push(f.cols.recordIndex[d.WR[slot]]);}
+      const lookup=await engine.fields(state.files,extra,picks);extraValue=(r,k)=>lookup(r.sources[0].fileId,r.sources[0].recordIndex,k);
+    }
+    const sheets=makeExportSheets(state.dataset,state.filters,{sections,detailFields,includeWeight:$('export-weight').checked,extraValue}),controls=countXmlControls(sheets);
     if(controls){notify(`导出内容含${controls}个 Excel 不支持的特殊字符，导出时将移除这些字符，网页原始值保留。`);}
     await saveFile(new Blob([writeXlsx(sheets)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`现场统计_${state.filters.start}_${state.filters.end}.xlsx`);
     $('export-dialog').close();if(!controls)notify('Excel已生成，包含当前筛选范围和统计口径。');
@@ -1489,39 +2119,36 @@ $('export-menu-button').addEventListener('click',()=>setExportMenu($('export-men
 $('menu-export-excel').addEventListener('click',()=>{setExportMenu(false);$('export-button').click();});
 document.addEventListener('click',e=>{if(!$('export-control').contains(e.target))setExportMenu(false);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')setExportMenu(false);});
-const archiveYield=()=>new Promise(resolve=>setTimeout(resolve,0));
-function archiveSummary(a){
-  const rows=[['已导入文件',a.fileCount+'个'],['原始读取记录',fmt(a.rawCount)+'条'],['确认完全重复',a.blocked?'尚未计算':fmt(a.duplicateCount)+'条'],['预计导出记录',a.blocked?'无法安全生成':fmt(a.entries.length)+'条'],['实际完成日期范围',a.range?a.range.start+' ～ '+a.range.end:'日期未知'],['结构冲突',a.conflicts.length?fmt(a.conflicts.length)+'项':'无'],['无法解析完成日期',a.blocked?'尚未计算':fmt(a.invalidFinishCount)+'条，仍保留原值'],['已隔离记录',a.blocked?'尚未计算':fmt(a.isolatedCount)+'条，仍保留，可能不完整'],['同任务编号不同内容',a.blocked?'尚未计算':fmt(a.taskConflictCount)+'组，全部保留']];
-  $('archive-summary').innerHTML='<dl class="archive-summary">'+rows.map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd>').join('')+'</dl>'+(a.duplicateCount?'<p class="small muted">重复副本：同文件内'+fmt(a.withinFileDuplicates)+'条，跨文件'+fmt(a.crossFileDuplicates)+'条。逐条精确核对，不按任务编号覆盖。</p>':'');
-  $('archive-errors').innerHTML=a.conflicts.map(c=>'<p>'+esc(c.fileName)+(c.line?' 第'+c.line+'行':'')+'：'+esc(c.reason)+(c.missing.length?'<br>缺失字段：'+esc(c.missing.join('、')):'')+(c.added.length?'<br>新增或名称不同的字段：'+esc(c.added.join('、')):'')+'</p>').join('');
+// Merged CSV of the kept rows (one per task number), completed before today (Japan time).
+function archivePlan(){
+  const d=state.dataset,today=japanDate(),{picks,count,range}=exportPicks(d,today);
+  return {picks,count,range,headers:state.files[0]?.archiveHeaders||[],cutoff:today,filename:range?`原始数据合并_${range.start}_${range.end}.csv`:'原始数据合并_日期未知.csv',
+    fileCount:state.files.length,rawCount:state.files.reduce((n,f)=>n+f.readRows+f.errorCount,0),todayExcluded:d.todayExcluded,dup:d.dup,skipped:d.skipped};
 }
-$('menu-export-csv').addEventListener('click',async()=>{
+function archiveSummary(a){
+  const rows=[['已导入文件',a.fileCount+'个'],['原始读取记录',fmt(a.rawCount)+'条'],['今日未完成数据（已排除）',fmt(a.todayExcluded)+'条'],['按任务编号去重',fmt(a.dup.dropped)+'条（其中内容不同 '+fmt(a.dup.differing)+' 条）'],['跳过的格式错误行',fmt(a.skipped.width+a.skipped.finish)+'条'],['导出截止',a.cutoff+' 之前（不含当天）'],['预计导出记录',fmt(a.count)+'条'],['完成日期范围',a.range?a.range.start+' ～ '+a.range.end:'无']];
+  $('archive-summary').innerHTML='<dl class="archive-summary">'+rows.map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd>').join('')+'</dl><p class="small muted">同一任务编号只导出统计采用的那一条；原始字段和值保持不变。</p>';
+}
+$('menu-export-csv').addEventListener('click',()=>{
   if(!state.files.length||state.importing||ui.archiveBusy)return;
-  setExportMenu(false);ui.archive=null;ui.archiveBusy=true;
-  $('archive-summary').innerHTML='';$('archive-errors').textContent='';$('archive-status').textContent='正在核对原始记录…';$('download-archive').disabled=true;$('close-archive').disabled=true;$('archive-dialog').showModal();
-  try{
-    const isolatedKeys=new Set(state.dataset.records.filter(r=>r.isolated).map(r=>rawRecordKey(r.raw)));
-    ui.archive=await prepareRawArchive(state.files,{isolatedKeys,yieldControl:archiveYield,onProgress:(n,total)=>{$('archive-status').textContent='正在核对：'+fmt(n)+' / '+fmt(total)+'条';}});
-    ui.archiveMetadata=ui.archive.blocked?null:createIsolationMetadata(ui.archive,state.dataset);
-    archiveSummary(ui.archive);$('download-archive').disabled=ui.archive.blocked;
-    $('archive-protection').hidden=!ui.archiveMetadata;
-    $('archive-status').textContent=ui.archive.blocked?'已停止合并导出，已导入文件和统计数据保持不变。':'原始字段和值保持不变。'+ui.archive.filename;
-  }catch(e){$('archive-errors').textContent=e.message;$('archive-status').textContent='归档未完成，已导入数据保持不变。';}
-  finally{ui.archiveBusy=false;$('close-archive').disabled=false;}
+  setExportMenu(false);$('archive-errors').textContent='';
+  ui.archive=archivePlan();archiveSummary(ui.archive);
+  $('download-archive').disabled=!ui.archive.count;$('close-archive').disabled=false;
+  $('archive-status').textContent=ui.archive.count?ui.archive.filename:'没有可导出的记录。';$('archive-dialog').showModal();
 });
 $('archive-dialog').addEventListener('cancel',e=>{if(ui.archiveBusy)e.preventDefault();});
-$('archive-dialog').addEventListener('close',()=>{ui.archive=null;ui.archiveMetadata=null;$('archive-summary').innerHTML='';});
+$('archive-dialog').addEventListener('close',()=>{ui.archive=null;$('archive-summary').innerHTML='';});
 $('close-archive').addEventListener('click',()=>{if(!ui.archiveBusy)$('archive-dialog').close();});
 $('download-archive').addEventListener('click',async()=>{
-  if(!ui.archive||ui.archive.blocked||ui.archiveBusy)return;
-  const archive=ui.archive,metadata=ui.archiveMetadata;ui.archiveBusy=true;$('download-archive').disabled=true;$('close-archive').disabled=true;
+  if(!ui.archive||!ui.archive.count||ui.archiveBusy)return;
+  const archive=ui.archive;ui.archiveBusy=true;$('download-archive').disabled=true;$('close-archive').disabled=true;
   try{
-    const parts=await rawArchiveParts(archive,{yieldControl:archiveYield,onProgress:(n,total)=>{$('archive-status').textContent='正在生成：'+fmt(n)+' / '+fmt(total)+'条';}});
-    await saveFile(new Blob(parts,{type:'text/csv;charset=utf-8'}),metadata?archive.filename.replace(/\.csv$/,'.protected.csv'):archive.filename);
-    if(metadata)await saveFile(new Blob([JSON.stringify(metadata,null,2)],{type:'application/json;charset=utf-8'}),archive.filename.replace(/\.csv$/,'.isolation.json'));
-    $('archive-dialog').close();notify(metadata?'已生成保护 CSV 和配套 JSON，请同时保存；如浏览器阻止第二份下载，可再次导出。':'合并原始 CSV 已生成，包含全部已导入的非重复原始记录。');
-  }catch(e){$('archive-errors').textContent=e.message;$('archive-status').textContent='归档未完成，已导入数据保持不变。';}
-  finally{ui.archiveBusy=false;$('close-archive').disabled=false;$('download-archive').disabled=!ui.archive||ui.archive.blocked;}
+    // Original text is re-read from the chosen files; only the kept rows are written.
+    const parts=await engine.exportCsv(state.files,archive.headers,archive.picks,{onProgress:p=>{$('archive-status').textContent='正在读取原始文件：'+(p.total?Math.round(p.bytes/p.total*100):0)+'%';}});
+    await saveFile(new Blob(parts,{type:'text/csv;charset=utf-8'}),archive.filename);
+    $('archive-dialog').close();notify('合并原始 CSV 已生成：去重后共'+fmt(archive.count)+'条，截至'+archive.cutoff+'之前。');
+  }catch(e){$('archive-errors').textContent=e.message;$('archive-status').textContent='导出未完成，已导入数据保持不变。';}
+  finally{ui.archiveBusy=false;$('close-archive').disabled=false;$('download-archive').disabled=!ui.archive||!ui.archive.count;}
 });
 render();
 
